@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /signup
+Disallow: /app/
+Disallow: /superadmin/
+Disallow: /api/
+Disallow: /share/
+
+Sitemap: https://sitelog.app/sitemap.xml

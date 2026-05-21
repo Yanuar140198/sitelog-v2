@@ -1,0 +1,6 @@
+Contact: mailto:security@sitelog.app
+Expires: 2027-12-31T23:59:59Z
+Preferred-Languages: en, id
+Canonical: https://sitelog.app/.well-known/security.txt
+Policy: https://sitelog.app/SECURITY.md
+Acknowledgments: https://sitelog.app/security/hall-of-fame
