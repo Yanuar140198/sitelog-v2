@@ -107,6 +107,8 @@ curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/ahsp
 
 Auth: `Bearer sk_live_*`. Scopes: `read` (queries only) | `write` (queries + mutations) | `admin` (full). 401 if missing/expired/revoked.
 
+**Interactive docs**: `/api/v1/docs` (Scalar UI) · **OpenAPI 3.1 spec**: `/api/v1/openapi.json`
+
 ## Deploy
 
 See [DEPLOY.md](./DEPLOY.md). Stack = Vercel (web + API) + Neon (DB) + R2 (storage) + Stripe + Resend + Anthropic.

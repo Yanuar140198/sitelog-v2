@@ -181,6 +181,16 @@ app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
 // REST API v1 (Bearer sk_live_*) — customer integrations
 const { rest } = await import('./rest.js');
+const { openApiSpec } = await import('./openapi.js');
+// OpenAPI spec — mounted BEFORE rest router so it's unauthenticated
+app.get('/api/v1/openapi.json', (c) => c.json(openApiSpec));
+app.get('/api/v1/docs', (c) => c.html(`<!doctype html><html><head><title>Sitelog API</title>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="https://unpkg.com/@scalar/api-reference@latest/dist/style.css"/>
+</head><body><div id="app"></div>
+<script id="api-reference" type="application/json">${JSON.stringify(openApiSpec)}</script>
+<script src="https://unpkg.com/@scalar/api-reference@latest/dist/browser/standalone.js"></script>
+</body></html>`));
 app.route('/api/v1', rest);
 
 app.use('/api/trpc/*', trpcServer({
