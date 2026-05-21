@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.0 — 2026-05-22
+
+### Features
+- Next.js security headers + CSP (web parity with API)
+  - X-Frame-Options, Referrer-Policy, Permissions-Policy, CSP with `frame-ancestors 'none'`
+  - `connect-src` includes Sentry, PostHog, Anthropic for proper allowlist
+- Platform announcement banner (super-admin CRUD)
+  - DB migration `0010_announcements.sql` + Drizzle schema
+  - tRPC `announcement.active` / `listAll` / `create` / `delete`
+  - App shell renders active banners with severity colors (info/warning/critical)
+  - Per-user dismiss via localStorage
+- `appRouter.announcement` added (now 30 routers total)
+
 ## v0.2.9 — 2026-05-22
 
 ### Features
