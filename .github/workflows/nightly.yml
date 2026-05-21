@@ -1,0 +1,42 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # daily 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  e2e-staging:
+    if: ${{ vars.STAGING_BASE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+      E2E_EMAIL: ${{ secrets.STAGING_E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.STAGING_E2E_PASSWORD }}
+      SITELOG_API_KEY: ${{ secrets.STAGING_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:e2e:install
+      - run: pnpm test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: e2e-trace, path: test-results/ }
+
+  load-smoke:
+    if: ${{ vars.STAGING_BASE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: grafana/setup-k6-action@v1
+      - name: k6 smoke
+        env:
+          K6_BASE_URL: ${{ vars.STAGING_API_URL }}
+          K6_API_KEY: ${{ secrets.STAGING_API_KEY }}
+        run: k6 run loadtest/smoke.js
