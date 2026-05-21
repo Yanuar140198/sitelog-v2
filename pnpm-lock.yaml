@@ -357,6 +357,9 @@ importers:
 
   packages/shared:
     devDependencies:
+      '@sitelog/db':
+        specifier: workspace:*
+        version: link:../db
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
