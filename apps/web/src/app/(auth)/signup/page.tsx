@@ -65,7 +65,7 @@ export default function SignupPage() {
         </Button>
       </form>
       <div className="text-sm text-neutral-600 font-mono">
-        Already have account? <Link href="/login" className="text-[var(--color-brand)] hover:underline">Sign in</Link>
+        Already have account? <Link href="/login" className="text-[var(--color-brand)] underline">Sign in</Link>
       </div>
     </div>
   );

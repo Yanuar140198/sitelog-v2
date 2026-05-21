@@ -28,6 +28,7 @@
     "dev:db:reset": "docker rm -f sitelog-pg && bash scripts/dev-start.sh"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@types/node": "^22.10.2",

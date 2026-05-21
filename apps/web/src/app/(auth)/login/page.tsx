@@ -54,7 +54,7 @@ export default function LoginPage() {
         </Button>
       </form>
       <div className="text-sm text-neutral-600 font-mono">
-        New here? <Link href="/signup" className="text-[var(--color-brand)] hover:underline">Create account</Link>
+        New here? <Link href="/signup" className="text-[var(--color-brand)] underline">Create account</Link>
       </div>
     </div>
   );
