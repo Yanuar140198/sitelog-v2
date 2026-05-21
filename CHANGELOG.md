@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.9 — 2026-05-22
+
+### Features
+- Security headers middleware on every response
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+  - `Strict-Transport-Security` (when `x-forwarded-proto: https`)
+- `/api/cron/prune-idempotency` (hourly Vercel cron) — deletes idempotency keys older than 24h
+
+### Tests
+- 3 E2E tests for security headers + request ID propagation
+- Total E2E: 37 → 40
+
 ## v0.2.8 — 2026-05-22
 
 ### Features
