@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "framework": null,
+  "regions": ["sin1"],
+  "functions": {
+    "src/server.ts": { "runtime": "edge", "maxDuration": 30 }
+  },
+  "crons": [
+    { "path": "/api/cron/webhook-retry", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/meters-report", "schedule": "0 * * * *" },
+    { "path": "/api/cron/prune-audit",   "schedule": "0 3 * * *" },
+    { "path": "/api/cron/photo-tag",     "schedule": "*/10 * * * *" },
+    { "path": "/api/cron/siem-forward",  "schedule": "*/15 * * * *" }
+  ]
+}
