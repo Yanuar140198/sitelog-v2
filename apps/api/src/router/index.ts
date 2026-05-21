@@ -26,6 +26,7 @@ import { pushRouter } from './push.js';
 import { domainRouter } from './domain.js';
 import { projectMemberRouter } from './project-member.js';
 import { maintenanceRouter } from './maintenance.js';
+import { gdprRouter } from './gdpr.js';
 
 export const appRouter = router({
   org: orgRouter,
@@ -55,6 +56,7 @@ export const appRouter = router({
   domain: domainRouter,
   projectMember: projectMemberRouter,
   maintenance: maintenanceRouter,
+  gdpr: gdprRouter,
 });
 
 export type AppRouter = typeof appRouter;
