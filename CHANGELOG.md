@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.8 — 2026-05-22
+
+### Features
+- POST `/api/v1/entries` REST endpoint (write scope) — submit daily entries via API
+- Idempotency-Key header support (Stripe-style)
+  - Same key + same body within 24h → cached 201 response with `X-Idempotent-Replay: 1`
+  - Same key + different body → 409 `IDEMPOTENCY_CONFLICT`
+- DB migration `0009_idempotency_keys.sql` (24h retention window)
+- OpenAPI 3.1 spec updated with `/entries` POST operation
+
+### Tests
+- 2 idempotency E2E tests (replay + conflict)
+- Total E2E: 35 → 37
+
 ## v0.2.7 — 2026-05-22
 
 ### Features
