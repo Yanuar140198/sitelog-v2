@@ -188,6 +188,40 @@ export const openApiSpec = {
         },
       },
     },
+    '/entries': {
+      post: {
+        summary: 'Submit a daily entry (idempotent via Idempotency-Key header)',
+        parameters: [
+          { name: 'Idempotency-Key', in: 'header', required: false, schema: { type: 'string' },
+            description: 'Optional opaque key. Same key + same body within 24h returns cached response.' },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['projectId', 'entryDate'],
+                properties: {
+                  projectId: { type: 'string', format: 'uuid' },
+                  entryDate: { type: 'string', format: 'date' },
+                  shift: { type: 'string', enum: ['day', 'night', 'all'], default: 'day' },
+                  weather: { type: 'string' },
+                  effectiveHours: { type: 'number' },
+                  workforce: { type: 'integer' },
+                  notes: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Entry created', content: { 'application/json': { schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/DailyEntry' } } } } } },
+          '404': { description: 'Project not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '409': { description: 'Idempotency-Key reused with different body', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
     '/entries/{id}': {
       get: {
         summary: 'Entry detail with activities',

@@ -63,6 +63,59 @@ test.describe('REST API v1', () => {
   });
 });
 
+test.describe('Idempotency (POST /entries)', () => {
+  test.skip(!API_KEY, 'SITELOG_API_KEY not set');
+
+  test('same Idempotency-Key + same body → replay', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    // Find a project to attach to
+    const projectsRes = await ctx.get('/api/v1/projects', { headers: { authorization: `Bearer ${API_KEY}` } });
+    const projects = (await projectsRes.json()).data;
+    if (!projects.length) test.skip();
+    const projectId = projects[0].id;
+    const idempKey = `e2e-${Date.now()}`;
+    const body = { projectId, entryDate: '2026-05-22', shift: 'day', effectiveHours: 8, workforce: 10 };
+
+    const r1 = await ctx.post('/api/v1/entries', {
+      headers: { authorization: `Bearer ${API_KEY}`, 'content-type': 'application/json', 'idempotency-key': idempKey },
+      data: body,
+    });
+    expect(r1.status()).toBe(201);
+    const id1 = (await r1.json()).data.id;
+
+    const r2 = await ctx.post('/api/v1/entries', {
+      headers: { authorization: `Bearer ${API_KEY}`, 'content-type': 'application/json', 'idempotency-key': idempKey },
+      data: body,
+    });
+    expect(r2.status()).toBe(201);
+    expect(r2.headers()['x-idempotent-replay']).toBe('1');
+    const id2 = (await r2.json()).data.id;
+    expect(id2).toBe(id1);  // same entry
+  });
+
+  test('same Idempotency-Key + diff body → 409 conflict', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const projectsRes = await ctx.get('/api/v1/projects', { headers: { authorization: `Bearer ${API_KEY}` } });
+    const projects = (await projectsRes.json()).data;
+    if (!projects.length) test.skip();
+    const projectId = projects[0].id;
+    const idempKey = `e2e-conflict-${Date.now()}`;
+
+    const r1 = await ctx.post('/api/v1/entries', {
+      headers: { authorization: `Bearer ${API_KEY}`, 'content-type': 'application/json', 'idempotency-key': idempKey },
+      data: { projectId, entryDate: '2026-05-22', shift: 'day', notes: 'first' },
+    });
+    expect(r1.status()).toBe(201);
+
+    const r2 = await ctx.post('/api/v1/entries', {
+      headers: { authorization: `Bearer ${API_KEY}`, 'content-type': 'application/json', 'idempotency-key': idempKey },
+      data: { projectId, entryDate: '2026-05-22', shift: 'day', notes: 'second (different)' },
+    });
+    expect(r2.status()).toBe(409);
+    expect((await r2.json()).error.code).toBe('IDEMPOTENCY_CONFLICT');
+  });
+});
+
 test.describe('OpenAPI spec', () => {
   test('GET /api/v1/openapi.json returns valid 3.1 spec without auth', async () => {
     const ctx = await request.newContext({ baseURL: API_BASE });
