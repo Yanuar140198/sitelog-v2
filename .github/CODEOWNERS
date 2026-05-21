@@ -1,0 +1,19 @@
+# Default owner — change to actual team handles before public push
+*       @sitelog/core
+
+# Auth + security — extra scrutiny
+/packages/auth/      @sitelog/core @sitelog/security
+/SECURITY.md         @sitelog/security
+/.github/workflows/  @sitelog/devops
+
+# DB schema — coordinate migrations
+/packages/db/src/schema/    @sitelog/core @sitelog/data
+/packages/db/drizzle/       @sitelog/data
+
+# Billing — financial impact
+/apps/api/src/lib/stripe.ts        @sitelog/core @sitelog/finance
+/apps/api/src/router/billing.ts    @sitelog/core @sitelog/finance
+/apps/api/src/lib/plan-limits.ts   @sitelog/core @sitelog/finance
+
+# Mobile native build
+/apps/mobile/  @sitelog/mobile

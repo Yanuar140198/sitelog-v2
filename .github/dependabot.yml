@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    groups:
+      eslint:
+        patterns: [eslint*, "@eslint/*", "typescript-eslint", "unused-imports*"]
+      drizzle:
+        patterns: [drizzle*, "@neondatabase/*", postgres]
+      react:
+        patterns: [react, react-dom, "@types/react*"]
+      next:
+        patterns: [next, "@next/*"]
+      trpc:
+        patterns: ["@trpc/*", superjson, zod]
+      expo:
+        patterns: [expo*, "@expo/*", react-native*]
+      tooling:
+        patterns: [turbo, prettier, vitest, "@playwright/*", playwright, husky, lint-staged]
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+    labels: [dependencies, ci]
