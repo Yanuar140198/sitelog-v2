@@ -8,7 +8,6 @@ export function PhotoAiPanel({ imageUrl, context, onClose }: { imageUrl: string;
 
   useEffect(() => {
     analyze.mutate({ imageUrl, context });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrl]);
 
   return (
