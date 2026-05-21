@@ -20,3 +20,5 @@ screenshots/
 .env
 scripts/shot*.py
 scripts/seed_*.py
+test-results/
+playwright-report/
