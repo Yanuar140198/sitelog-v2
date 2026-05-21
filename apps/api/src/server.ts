@@ -20,6 +20,9 @@ import { eq, sql } from 'drizzle-orm';
 
 const app = new Hono();
 
+// Optional Sentry init (no-op when SENTRY_DSN unset)
+import('./lib/sentry.js').then(m => m.initSentry()).catch(() => {});
+
 app.use('*', logger());
 
 // Metrics middleware — counts http requests + errors (excludes /metrics + /healthz to avoid scrape pollution)
