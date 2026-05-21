@@ -44,3 +44,27 @@ test.describe('Observability endpoints', () => {
     expect([200, 401]).toContain(res.status());
   });
 });
+
+test.describe('Security headers', () => {
+  test('every response carries safe defaults', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/healthz');
+    const h = res.headers();
+    expect(h['x-content-type-options']).toBe('nosniff');
+    expect(h['x-frame-options']).toBe('DENY');
+    expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(h['permissions-policy']).toMatch(/camera=\(\)/);
+  });
+
+  test('X-Request-ID generated when missing', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/healthz');
+    expect(res.headers()['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  test('X-Request-ID echoed when provided', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/healthz', { headers: { 'x-request-id': 'my-trace-id-xyz' } });
+    expect(res.headers()['x-request-id']).toBe('my-trace-id-xyz');
+  });
+});
