@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.5 — 2026-05-22
+
+### Features
+- GDPR `gdpr.exportMyData` query — JSON dump of all user-attributable rows (Article 15)
+- GDPR `gdpr.requestDeletion` mutation — anonymize + scheduled hard delete (Article 17)
+- Custom 404 `not-found.tsx` + 500 `error.tsx` pages (branded, Sentry-aware)
+- Postman collection in `examples/` for non-CLI customers
+- `http_5xx_total` metric counter (separates server errors from 4xx for alerting)
+
 ## v0.2.4 — 2026-05-22
 
 ### Features
