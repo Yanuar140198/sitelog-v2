@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   resourceLineCost, ahspBaselineRate, itemUnitRate, itemSubtotal,
   projectTotal, spi, geofenceDistanceM, isInsideGeofence,
-  checkProjectQuota, checkMemberQuota, PLAN_LIMITS,
+  checkProjectQuota, checkSeatQuota, PLAN_LIMITS,
 } from './boq-math.js';
 
 describe('AHSP rate computation (Bina Marga parity)', () => {
@@ -132,20 +132,24 @@ describe('Plan quotas (matches live demo enforcement)', () => {
     expect(checkProjectQuota('starter', 10)).toMatch(/Plan limit reached: 10/);
   });
 
-  it('pro has unlimited projects', () => {
-    expect(checkProjectQuota('pro', 1_000)).toBe(null);
-    expect(checkProjectQuota('pro', 999_999)).toBe(null);
+  it('pro allows up to 100 projects', () => {
+    expect(checkProjectQuota('pro', 99)).toBe(null);
+    expect(checkProjectQuota('pro', 100)).toMatch(/100 projects/);
   });
 
-  it('enterprise has unlimited everything', () => {
-    expect(PLAN_LIMITS.enterprise.projects).toBe(Infinity);
-    expect(PLAN_LIMITS.enterprise.members).toBe(Infinity);
-    expect(checkMemberQuota('enterprise', 10_000)).toBe(null);
+  it('enterprise has unlimited (sentinel -1)', () => {
+    expect(PLAN_LIMITS.enterprise!.projects).toBe(-1);
+    expect(PLAN_LIMITS.enterprise!.seats).toBe(-1);
+    expect(checkProjectQuota('enterprise', 999_999)).toBe(null);
   });
 
-  it('member quota matches plan', () => {
-    expect(checkMemberQuota('trial', 5)).toMatch(/5 members/);
-    expect(checkMemberQuota('pro', 25)).toMatch(/25 members/);
-    expect(checkMemberQuota('pro', 24)).toBe(null);
+  it('unknown plan defaults to trial limits', () => {
+    expect(checkProjectQuota('unknown-plan', 3)).toMatch(/3 projects/);
+  });
+
+  it('seat quota matches plan', () => {
+    expect(checkSeatQuota('trial', 5)).toMatch(/5 seats/);
+    expect(checkSeatQuota('pro', 25)).toMatch(/25 seats/);
+    expect(checkSeatQuota('pro', 24)).toBe(null);
   });
 });

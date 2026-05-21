@@ -86,29 +86,47 @@ export function isInsideGeofence(siteLat: number, siteLng: number, radiusM: numb
 }
 
 /**
- * Plan quota check. Returns null if allowed, error message if blocked.
+ * Plan quota limits — single source of truth.
+ *
+ * `-1` = unlimited (used for DB checks rather than Infinity for serialization).
  */
-export const PLAN_LIMITS = {
-  trial: { projects: 3, members: 5, storageMb: 100 },
-  starter: { projects: 10, members: 10, storageMb: 1_000 },
-  pro: { projects: Infinity, members: 25, storageMb: 10_000 },
-  enterprise: { projects: Infinity, members: Infinity, storageMb: Infinity },
-} as const;
+export interface PlanLimits {
+  projects: number;
+  seats: number;
+  storageGb: number;
+  aiCallsPerMonth: number;
+}
+
+export const PLAN_LIMITS: Record<string, PlanLimits> = {
+  trial:      { projects: 3,   seats: 5,  storageGb: 1,   aiCallsPerMonth: 50 },
+  starter:    { projects: 10,  seats: 5,  storageGb: 10,  aiCallsPerMonth: 500 },
+  pro:        { projects: 100, seats: 25, storageGb: 100, aiCallsPerMonth: 5000 },
+  enterprise: { projects: -1,  seats: -1, storageGb: -1,  aiCallsPerMonth: -1 },
+};
 
 export type PlanTier = keyof typeof PLAN_LIMITS;
 
-export function checkProjectQuota(plan: PlanTier, currentCount: number): string | null {
-  const max = PLAN_LIMITS[plan].projects;
+export function getPlanLimits(plan: string): PlanLimits {
+  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.trial!;
+}
+
+export function checkProjectQuota(plan: string, currentCount: number): string | null {
+  const max = getPlanLimits(plan).projects;
+  if (max === -1) return null;
   if (currentCount >= max) {
     return `Plan limit reached: ${max} projects max. Upgrade to add more.`;
   }
   return null;
 }
 
-export function checkMemberQuota(plan: PlanTier, currentCount: number): string | null {
-  const max = PLAN_LIMITS[plan].members;
+export function checkSeatQuota(plan: string, currentCount: number): string | null {
+  const max = getPlanLimits(plan).seats;
+  if (max === -1) return null;
   if (currentCount >= max) {
-    return `Plan limit reached: ${max} members max. Upgrade to add more.`;
+    return `Plan limit reached: ${max} seats max. Upgrade to add more.`;
   }
   return null;
 }
+
+/** @deprecated use checkSeatQuota — kept for backward compat with old tests */
+export const checkMemberQuota = checkSeatQuota;

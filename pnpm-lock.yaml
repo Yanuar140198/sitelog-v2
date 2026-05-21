@@ -44,6 +44,9 @@ importers:
       '@sitelog/emails':
         specifier: workspace:*
         version: link:../../packages/emails
+      '@sitelog/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@trpc/server':
         specifier: ^11.0.0-rc.682
         version: 11.17.0(typescript@5.9.3)
