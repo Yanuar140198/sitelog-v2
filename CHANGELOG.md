@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.2.4 — 2026-05-22
+
+### Features
+- k6 load test scripts (smoke + stress) at `loadtest/`
+- Nightly CI workflow (E2E + k6 against staging, gated on `STAGING_BASE_URL` repo var)
+- Bundle size workflow (soft 150 KB FLJS budget)
+
+## v0.2.3 — 2026-05-22
+
+### Features
+- A11y test suite (5 axe-core tests on public pages, WCAG 2.0/2.1 AA)
+- LICENSE (proprietary) + CODE_OF_CONDUCT (Contributor Covenant v2.1)
+- Docker build smoke test job added to CI
+- Webhook signature verification examples for customer consumers (Node + Python)
+
+### Bug fixes
+- WCAG link-in-text-block violation in signup + login (color-only distinguishability)
+
+## v0.2.2 — 2026-05-22
+
+### Features
+- Metrics counters wired into actual handlers (live data flow per request)
+- CodeQL SAST workflow (security-extended + security-and-quality)
+- Optional server-side Sentry init (dynamic import pattern)
+- Local backup helper script (`scripts/backup-local.sh`)
+
+### Tests
+- 6 rate-limiter unit tests (token bucket invariants)
+
+## v0.2.1 — 2026-05-22
+
+### Features
+- OpenAPI 3.1 spec at `/api/v1/openapi.json`
+- Scalar interactive docs at `/api/v1/docs`
+- Prometheus `/metrics` endpoint (7 counters + 7 business gauges)
+- Grafana dashboard JSON (12 panels)
+- 3 example SDK clients (bash + Node + Python)
+- Deep status endpoint with live Stripe ping when configured
+
+### Tests
+- 4 observability E2E tests
+- 2 OpenAPI spec E2E tests
+
 ## v0.2.0 — 2026-05-22
 
 ### Features
