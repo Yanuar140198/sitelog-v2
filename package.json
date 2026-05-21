@@ -16,7 +16,10 @@
     "db:studio": "pnpm --filter @sitelog/db studio",
     "web:dev": "pnpm --filter @sitelog/web dev",
     "api:dev": "pnpm --filter @sitelog/api dev",
-    "mobile:dev": "pnpm --filter @sitelog/mobile start"
+    "mobile:dev": "pnpm --filter @sitelog/mobile start",
+    "dev:db": "bash scripts/dev-start.sh",
+    "dev:db:stop": "docker stop sitelog-pg",
+    "dev:db:reset": "docker rm -f sitelog-pg && bash scripts/dev-start.sh"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
