@@ -18,6 +18,8 @@ Reference clients + cookbooks for the Sitelog REST API v1.
 | `curl-cookbook.sh` | bash + curl + jq | Walks all 6 endpoints |
 | `node-sdk.ts` | TypeScript | Typed client class with usage example |
 | `python-sdk.py` | Python 3 + httpx | Equivalent in Python |
+| `webhook-verify-node.ts` | TypeScript | HMAC-SHA256 verify for incoming webhooks |
+| `webhook-verify-python.py` | Python | HMAC-SHA256 verify for incoming webhooks |
 
 ## Running
 
