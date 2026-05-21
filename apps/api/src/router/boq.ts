@@ -54,8 +54,6 @@ async function resolveRates(
   ahspItemIds: string[],
 ): Promise<Map<string, ResolvedRate>> {
   if (ahspItemIds.length === 0) return new Map();
-  const items = await ctx.db.select().from(ahspItem).where(/* in() */ eq(ahspItem.id, ahspItemIds[0]!)); // placeholder
-  // Use IN for the array
   const itemsAll = await ctx.db.query.ahspItem.findMany({
     where: (a: any, { inArray }: any) => inArray(a.id, ahspItemIds),
   });

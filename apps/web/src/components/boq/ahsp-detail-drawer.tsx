@@ -4,7 +4,7 @@ import { fmtIDR, fmtNum } from '@/lib/utils';
 import { X } from 'lucide-react';
 
 export function AhspDetailDrawer({
-  ahspItemId, projectId, onClose,
+  ahspItemId, projectId: _projectId, onClose,
 }: { ahspItemId: string | null; projectId: string; onClose: () => void }) {
   const detail = trpc.ahsp.detail.useQuery({ id: ahspItemId! }, { enabled: !!ahspItemId });
 

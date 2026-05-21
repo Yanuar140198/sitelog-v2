@@ -1,10 +1,8 @@
 import { View, Text, FlatList, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
 import { trpc } from '@sitelog/api-client/react';
 import { useTheme } from '@/lib/theme';
 
 export default function NotificationsScreen() {
-  const router = useRouter();
   const { palette } = useTheme();
   const list = trpc.notification.list.useQuery({ limit: 50 });
   const utils = trpc.useUtils();

@@ -8,7 +8,6 @@ import { unitMaintenance, unit } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 
 const KIND = ['scheduled', 'breakdown', 'inspection', 'oil_change', 'tire', 'overhaul'] as const;
-const STATUS = ['planned', 'in_progress', 'completed', 'overdue', 'cancelled'] as const;
 
 export const maintenanceRouter = router({
   listByUnit: orgProcedure
