@@ -180,11 +180,17 @@ export const boqRouter = router({
         };
       });
 
-      const markupAmt = subtotal * markupPct / 100;
-      const contingencyAmt = subtotal * contingencyPct / 100;
-      const subtotalBeforePpn = subtotal + markupAmt + contingencyAmt;
-      const ppnAmt = subtotalBeforePpn * ppnPct / 100;
-      const grandTotal = subtotalBeforePpn + ppnAmt;
+      // Use shared (unit-tested) project total math
+      const { projectTotal } = await import('@sitelog/shared');
+      const totals = projectTotal(
+        [{ quantity: 1, unitRateOverride: subtotal }],  // pre-aggregated as single line
+        { markupPct, contingencyPct, ppnPct },
+      );
+      const markupAmt = totals.markup;
+      const contingencyAmt = totals.contingency;
+      const subtotalBeforePpn = totals.prePpn;
+      const ppnAmt = totals.ppn;
+      const grandTotal = totals.grand;
 
       return {
         projectId: input.projectId,
