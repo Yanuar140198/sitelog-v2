@@ -11,6 +11,7 @@
     { "path": "/api/cron/meters-report", "schedule": "0 * * * *" },
     { "path": "/api/cron/prune-audit",   "schedule": "0 3 * * *" },
     { "path": "/api/cron/photo-tag",     "schedule": "*/10 * * * *" },
-    { "path": "/api/cron/siem-forward",  "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/siem-forward",  "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/prune-idempotency", "schedule": "0 * * * *" }
   ]
 }

@@ -27,6 +27,10 @@ import('./lib/sentry.js').then(m => m.initSentry()).catch(() => {});
 const { requestIdMiddleware } = await import('./lib/request-id.js');
 app.use('*', requestIdMiddleware() as any);
 
+// Security headers on every response
+const { securityHeadersMiddleware } = await import('./lib/security-headers.js');
+app.use('*', securityHeadersMiddleware());
+
 // Maintenance mode — 503 most paths when MAINTENANCE_MODE=1
 const { maintenanceModeMiddleware } = await import('./lib/maintenance-mode.js');
 app.use('*', maintenanceModeMiddleware());
@@ -103,6 +107,19 @@ app.get('/status', async (c) => {
     version: process.env.npm_package_version ?? '0.2.0',
     checks,
   }, criticalOk ? 200 : 503);
+});
+
+/** Idempotency-key prune cron — every hour, removes keys older than 24h. */
+app.post('/api/cron/prune-idempotency', async (c) => {
+  const secret = c.req.header('x-cron-secret');
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+    return c.json({ ok: false, error: 'forbidden' }, 403);
+  }
+  const r: any = await db.execute(sql`
+    DELETE FROM idempotency_key WHERE created_at < NOW() - INTERVAL '24 hours' RETURNING key
+  `);
+  const pruned = ((r.rows ?? r) as unknown[]).length;
+  return c.json({ ok: true, pruned });
 });
 
 /** Auto-tag photos cron — every 10 min. */
