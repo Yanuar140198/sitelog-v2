@@ -1,0 +1,84 @@
+# Changelog
+
+## v0.1.0 — 2026-05-21 (Initial release)
+
+Production-ready Sitelog construction SaaS. Verified end-to-end via headless browser smoke test.
+
+### Core features
+
+- **Auth**: Better Auth signup/login + multi-tenant org sessions + 2FA TOTP + magic link + invite tokens
+- **BOQ engine**: AHSP catalog with resource lines (Tenaga + Bahan + Peralatan), unit rate baseline computation, override per-item, markup/contingency/PPN, financial summary panel
+- **AHSP detail page**: full Bina Marga breakdown matching Excel parity (verified Rp 38,102/m³)
+- **Daily entries**: shift + weather + activities + equipment + photos, geofence validation, offline queue (mobile)
+- **Analytics**: live SPI/CPI computation from entry quantities vs plan, per-project progress bars
+- **BOQ versions**: snapshot + restore + A/B diff
+- **Templates**: org-custom + public marketplace, save from project + apply to new
+- **AI Suggest**: Anthropic Claude integration with stub fallback (3 hardcoded scope recommendations by project type)
+- **Rate Sanity**: flags BOQ items >10% off AHSP baseline
+- **Audit log**: every mutation tracked with actor/IP/UA + CSV export
+- **Webhooks**: outbound HMAC-SHA256 signed events + retry queue
+- **API keys**: `sk_live_*` bearer tokens with scope-based RBAC
+- **Plan quotas**: trial=3 projects, starter=10, pro=∞, middleware-enforced
+- **XLSX export**: full BOQ download (verified Rp 3.49B grand total)
+- **Public share**: anonymous client view via `/share/{token}`
+- **Custom domain**: per-org enterprise white-label
+- **Super admin**: platform overview + org detail + force-plan mutation
+- **Status page**: real-time component health (DB/Stripe/AI/R2)
+- **Cmd+K palette**: navigation + AI ask mode (`?` prefix)
+
+### Stack
+
+- Turborepo 2.9 + pnpm 11 monorepo
+- Next.js 15.5 + React 19 + Tailwind v4 (web, 32 pages)
+- Expo 52 + React Native 0.76 + Expo Router (mobile, 9 screens)
+- Hono 4.6 + tRPC v11 + Bun (API, 28 routers)
+- PostgreSQL + Drizzle (12 schema modules, 8 migrations)
+- Better Auth 1.1 with custom UUID generator + bridge tables for legacy schema
+- Auto-detect DB driver: neon-http for Neon serverless, postgres-js for self-hosted
+
+### Runtime bugs fixed during smoke test (22)
+
+1. observability.ts dynamic import wrapped in `new Function()` to defeat webpack static analysis
+2. react/react-dom pinned to exact 19.2.6 (was version mismatch)
+3. Onboarding page Suspense boundary added for useSearchParams
+4. tRPC reserved word `apply` renamed to `applyToProject`
+5. DB driver auto-detection added (Neon vs postgres-js by URL)
+6. Better Auth `account` + `verification` tables added to schema + adapter
+7. `session.updatedAt` column added (Better Auth required)
+8. Better Auth `generateId: () => crypto.randomUUID()` config (UUID columns)
+9. `trustedOrigins` config + `defaultCookieAttributes` for cross-port cookies
+10. `/api/auth/*` mounted in Hono server
+11. `credentials: 'include'` in tRPC fetch + Cookie in CORS allowHeaders
+12. Next.js rewrites `/api/*` to same-origin (cookie auth cross-port fix)
+13. tRPC mount endpoint config + `onError` log
+14. `resolveAuthSession` allows no-org session (new signups need org.create access)
+15. `orgProcedure` checks empty orgId
+16. Project new form: empty date strings coerced to undefined
+17. Zod transforms `''` for optional date fields
+18. AHSP seed: insert detail items as own items (not just metadata link to rate items)
+19. Dashboard portfolio: live SQL aggregation from boq_item × ahsp_resource
+20. Dashboard portfolio: earned value live from entry_activity actual vs plan
+21. XLSX + PDF exports: rate from resource lines baseline (was defaulting to 0)
+22. retention.ts: drop `.returning()` select shape overload (postgres-js incompatible)
+
+### Demo data populated
+
+- 1 org Demo Construction (Pro plan, 25 seats)
+- 4 projects (3× LS 45 + 1× MMS 12 via template)
+- 6 BOQ scopes (Rp 7.13B portfolio)
+- 3 daily entries (25,500 m³ actual)
+- 2 BOQ versions
+- 1 saved template (Mining DT Standard 50K)
+- 1 invite (supervisor@sitelog.local)
+- 1 API key (CI Integration, ADMIN scope)
+- 1 webhook (3 events HMAC signed)
+- 12 audit log entries
+- 1 public share link (anon)
+
+### Files
+
+- 200+ source files tracked
+- 6 commits
+- 8 packages typecheck clean
+- Web build: 32 routes, 102 KB First Load JS
+- API build: 1,896 modules, 8.64 MB bundle
