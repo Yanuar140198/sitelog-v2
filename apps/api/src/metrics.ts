@@ -13,12 +13,13 @@ const startedAt = Date.now();
 
 interface Counter { value: number }
 const counters: Record<string, Counter> = {
-  http_requests_total: { value: 0 },
-  http_errors_total:   { value: 0 },
-  trpc_calls_total:    { value: 0 },
-  rest_calls_total:    { value: 0 },
+  http_requests_total:      { value: 0 },
+  http_errors_total:        { value: 0 },   // 4xx + 5xx
+  http_5xx_total:           { value: 0 },   // server errors only
+  trpc_calls_total:         { value: 0 },
+  rest_calls_total:         { value: 0 },
   webhook_dispatched_total: { value: 0 },
-  ai_calls_total:      { value: 0 },
+  ai_calls_total:           { value: 0 },
 };
 
 export function bump(name: keyof typeof counters, n = 1) {
@@ -83,5 +84,6 @@ export function metricsMiddleware() {
     bump('http_requests_total');
     await next();
     if (c.res.status >= 400) bump('http_errors_total');
+    if (c.res.status >= 500) bump('http_5xx_total');
   };
 }
