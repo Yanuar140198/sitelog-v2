@@ -1,0 +1,33 @@
+name: Bundle Size
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Build web (prod)
+        run: pnpm --filter @sitelog/web build
+      - name: Measure First Load JS
+        run: |
+          # Parse Next.js build output for First Load JS shared size
+          BUNDLE=$(grep -E "First Load JS shared by all" apps/web/.next/build-output.txt 2>/dev/null || \
+                   du -sb apps/web/.next/static | cut -f1)
+          echo "Bundle size: $BUNDLE bytes"
+          # Soft budget: warn if > 150 KB shared FLJS
+          MAX=153600
+          if [ "$BUNDLE" -gt "$MAX" ]; then
+            echo "::warning::Bundle size $BUNDLE > $MAX bytes (soft budget)"
+          fi
