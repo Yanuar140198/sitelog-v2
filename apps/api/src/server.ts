@@ -23,6 +23,10 @@ const app = new Hono();
 // Optional Sentry init (no-op when SENTRY_DSN unset)
 import('./lib/sentry.js').then(m => m.initSentry()).catch(() => {});
 
+// Request ID propagation (must come first so all downstream see it)
+const { requestIdMiddleware } = await import('./lib/request-id.js');
+app.use('*', requestIdMiddleware() as any);
+
 app.use('*', logger());
 
 // Metrics middleware — counts http requests + errors (excludes /metrics + /healthz to avoid scrape pollution)
