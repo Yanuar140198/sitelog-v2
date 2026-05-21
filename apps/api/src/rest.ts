@@ -148,6 +148,49 @@ rest.get('/ahsp', async (c) => {
   return c.json({ data: rows, count: rows.length, orgId });
 });
 
+// POST /api/v1/entries — submit a daily entry (idempotent via Idempotency-Key header)
+rest.post('/entries', requireScope('write'), async (c) => {
+  const orgId = c.get('orgId');
+  const idempKey = c.req.header('idempotency-key');
+  const rawBody = await c.req.text();
+
+  if (idempKey) {
+    const { lookupIdempotency } = await import('./lib/idempotency.js');
+    const { cached, conflict } = await lookupIdempotency(orgId, idempKey, 'POST', '/api/v1/entries', rawBody);
+    if (conflict) return err('IDEMPOTENCY_CONFLICT', 'Idempotency-Key already used with different request body', 409);
+    if (cached) {
+      c.header('X-Idempotent-Replay', '1');
+      return new Response(cached.body, { status: cached.status, headers: { 'content-type': 'application/json' } });
+    }
+  }
+
+  let parsed: any;
+  try { parsed = JSON.parse(rawBody); } catch { return err('INVALID_JSON', 'Body must be valid JSON', 400); }
+  if (!parsed.projectId || !parsed.entryDate) return err('VALIDATION', 'projectId + entryDate required', 400);
+
+  // Verify project belongs to org
+  const [proj] = await db.select().from(project).where(and(eq(project.id, parsed.projectId), eq(project.organizationId, orgId))).limit(1);
+  if (!proj) return err('NOT_FOUND', 'Project not found in your org', 404);
+
+  // Insert entry
+  const [entry] = await db.insert(dailyEntry).values({
+    projectId: parsed.projectId,
+    entryDate: parsed.entryDate,
+    shift: parsed.shift ?? 'day',
+    weather: parsed.weather ?? null,
+    effectiveHours: parsed.effectiveHours != null ? String(parsed.effectiveHours) : null,
+    workforce: parsed.workforce ?? null,
+    notes: parsed.notes ?? null,
+  }).returning();
+
+  const body = JSON.stringify({ data: entry });
+  if (idempKey) {
+    const { storeIdempotency } = await import('./lib/idempotency.js');
+    await storeIdempotency(orgId, idempKey, 'POST', '/api/v1/entries', rawBody, 201, body).catch(() => {});
+  }
+  return new Response(body, { status: 201, headers: { 'content-type': 'application/json' } });
+});
+
 // GET /api/v1/me — verify auth
 rest.get('/me', async (c) => {
   return c.json({
