@@ -30,6 +30,18 @@ app.use('*', cors({
 
 app.get('/healthz', (c) => c.json({ ok: true, ts: Date.now() }));
 
+// Prometheus metrics — text/plain, optionally token-gated via METRICS_TOKEN env
+app.get('/metrics', async (c) => {
+  const token = process.env.METRICS_TOKEN;
+  if (token) {
+    const auth = c.req.header('authorization');
+    if (auth !== `Bearer ${token}`) return c.text('Unauthorized', 401);
+  }
+  const { renderMetrics } = await import('./metrics.js');
+  const body = await renderMetrics();
+  return c.text(body, 200, { 'content-type': 'text/plain; version=0.0.4' });
+});
+
 /** Public status — uptime check target. Real probes for DB; config check for opt-in deps. */
 app.get('/status', async (c) => {
   const checks: Record<string, { ok: boolean; latency?: number; error?: string }> = {};
