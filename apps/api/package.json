@@ -1,0 +1,38 @@
+{
+  "name": "@sitelog/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./router": "./src/router/index.ts",
+    "./context": "./src/context.ts"
+  },
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "bun build src/server.ts --target=bun --outdir=dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sitelog/db": "workspace:*",
+    "@sitelog/auth": "workspace:*",
+    "@sitelog/emails": "workspace:*",
+    "drizzle-orm": "^0.38.2",
+    "hono": "^4.6.14",
+    "@hono/trpc-server": "^0.3.4",
+    "@trpc/server": "^11.0.0-rc.682",
+    "zod": "^3.24.1",
+    "superjson": "^2.2.2",
+    "ulid": "^2.3.0",
+    "stripe": "^17.5.0",
+    "resend": "^4.0.1",
+    "@aws-sdk/client-s3": "^3.717.0",
+    "@aws-sdk/s3-request-presigner": "^3.717.0",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "typescript": "^5.7.2"
+  }
+}

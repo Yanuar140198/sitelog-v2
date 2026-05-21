@@ -1,0 +1,27 @@
+{
+  "name": "sitelog",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @sitelog/db generate",
+    "db:migrate": "pnpm --filter @sitelog/db migrate",
+    "db:studio": "pnpm --filter @sitelog/db studio",
+    "web:dev": "pnpm --filter @sitelog/web dev",
+    "api:dev": "pnpm --filter @sitelog/api dev",
+    "mobile:dev": "pnpm --filter @sitelog/mobile start"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "prettier": "^3.4.2",
+    "@types/node": "^22.10.2"
+  }
+}

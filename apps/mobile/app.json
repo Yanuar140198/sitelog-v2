@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Sitelog",
+    "slug": "sitelog",
+    "scheme": "sitelog",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "experiments": { "typedRoutes": true },
+    "ios": { "bundleIdentifier": "com.sitelog.app" },
+    "android": {
+      "package": "com.sitelog.app",
+      "adaptiveIcon": { "foregroundImage": "./assets/icon.png", "backgroundColor": "#0A0A0A" }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-camera", { "cameraPermission": "Sitelog needs camera access for daily report photos" }],
+      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Sitelog uses location for geo-tagging entries" }]
+    ]
+  }
+}

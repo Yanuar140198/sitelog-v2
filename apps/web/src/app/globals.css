@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #FF5500;
+  --color-ink: #0A0A0A;
+  --color-paper: #FAFAF7;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+html, body { @apply bg-[var(--color-paper)] text-[var(--color-ink)] antialiased; }

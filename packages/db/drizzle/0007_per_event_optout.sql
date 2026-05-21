@@ -1,0 +1,1 @@
+ALTER TABLE "user_preference" ADD COLUMN "event_opt_out" text;
