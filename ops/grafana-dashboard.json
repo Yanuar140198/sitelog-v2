@@ -1,0 +1,90 @@
+{
+  "title": "Sitelog Platform",
+  "tags": ["sitelog"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Active Orgs",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sitelog_organizations_total", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Active Projects",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [{ "expr": "sitelog_projects_active", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Users",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [{ "expr": "sitelog_users_total", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Audit events (24h)",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sitelog_audit_events_24h", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 5, "type": "stat", "title": "Uptime (hours)",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [{ "expr": "sitelog_uptime_seconds / 3600", "datasource": { "type": "prometheus", "uid": "${datasource}" } }],
+      "fieldConfig": { "defaults": { "decimals": 1 } }
+    },
+    {
+      "id": 6, "type": "stat", "title": "Build",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [{ "expr": "sitelog_build_info", "legendFormat": "{{version}}", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "HTTP request rate (1m)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "rate(sitelog_http_requests_total[1m])", "legendFormat": "requests/s", "datasource": { "type": "prometheus", "uid": "${datasource}" } },
+        { "expr": "rate(sitelog_http_errors_total[1m])",   "legendFormat": "errors/s",   "datasource": { "type": "prometheus", "uid": "${datasource}" } }
+      ]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Business activity rate (1m)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "rate(sitelog_trpc_calls_total[1m])",        "legendFormat": "tRPC", "datasource": { "type": "prometheus", "uid": "${datasource}" } },
+        { "expr": "rate(sitelog_rest_calls_total[1m])",        "legendFormat": "REST", "datasource": { "type": "prometheus", "uid": "${datasource}" } },
+        { "expr": "rate(sitelog_webhook_dispatched_total[1m])", "legendFormat": "Webhooks", "datasource": { "type": "prometheus", "uid": "${datasource}" } },
+        { "expr": "rate(sitelog_ai_calls_total[1m])",          "legendFormat": "AI", "datasource": { "type": "prometheus", "uid": "${datasource}" } }
+      ]
+    },
+    {
+      "id": 20, "type": "piechart", "title": "Orgs by plan",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "targets": [{ "expr": "sitelog_orgs_by_plan", "legendFormat": "{{plan}}", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 21, "type": "stat", "title": "Active webhooks",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 12 },
+      "targets": [{ "expr": "sitelog_webhooks_active", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 22, "type": "stat", "title": "Active API keys",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 16 },
+      "targets": [{ "expr": "sitelog_api_keys_active", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    },
+    {
+      "id": 23, "type": "stat", "title": "Daily entries (lifetime)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [{ "expr": "sitelog_daily_entries_total", "datasource": { "type": "prometheus", "uid": "${datasource}" } }]
+    }
+  ]
+}

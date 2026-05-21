@@ -10,9 +10,9 @@ const PASSWORD = process.env.E2E_PASSWORD ?? 'demopass123';
 
 test.describe('Public marketing', () => {
   test('landing renders hero + CTA', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByText(/Build BOQ/i)).toBeVisible();
-    await expect(page.getByText(/Hit your numbers/i)).toBeVisible();
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('h1').first()).toContainText(/Build BOQ/i);
+    await expect(page.locator('h1').first()).toContainText(/Hit your numbers/i);
     await expect(page.getByRole('link', { name: /start.*free|sign\s*up/i }).first()).toBeVisible();
   });
 
