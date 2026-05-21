@@ -27,6 +27,7 @@ import { domainRouter } from './domain.js';
 import { projectMemberRouter } from './project-member.js';
 import { maintenanceRouter } from './maintenance.js';
 import { gdprRouter } from './gdpr.js';
+import { announcementRouter } from './announcement.js';
 
 export const appRouter = router({
   org: orgRouter,
@@ -57,6 +58,7 @@ export const appRouter = router({
   projectMember: projectMemberRouter,
   maintenance: maintenanceRouter,
   gdpr: gdprRouter,
+  announcement: announcementRouter,
 });
 
 export type AppRouter = typeof appRouter;

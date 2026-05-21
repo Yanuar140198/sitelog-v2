@@ -9,3 +9,4 @@ export * from './audit';
 export * from './notification';
 export * from './integrations';
 export * from './auth-bridge';
+export * from './announcements';
