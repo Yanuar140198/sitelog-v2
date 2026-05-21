@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.7 — 2026-05-22
+
+### Features
+- Request ID middleware: auto-generates UUID, honors upstream `X-Request-ID`, always echoed on response
+- Maintenance mode middleware: `MAINTENANCE_MODE=1` → 503 most paths (exempts `/healthz`, `/status`, `/metrics`)
+  - `X-Maintenance-Bypass` header + `MAINTENANCE_BYPASS_SECRET` admin override
+  - Custom message via `MAINTENANCE_MESSAGE` env
+- Structured JSON logger (Loki/CloudWatch/Datadog parseable, level filter via `LOG_LEVEL`)
+- `.well-known/security.txt` (RFC 9116) for vulnerability disclosure
+- `robots.txt` + Next.js sitemap.xml for SEO
+  - Disallows `/app`, `/superadmin`, `/api`, `/share` (private surfaces)
+
 ## v0.2.6 — 2026-05-22
 
 ### Features
