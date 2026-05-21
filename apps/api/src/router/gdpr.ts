@@ -11,6 +11,7 @@ import { router, protectedProcedure } from '../trpc.js';
 import { db, user, membership, dailyEntry, entryActivity, auditLog, project } from '@sitelog/db';
 import { eq, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { DELETE_CONFIRMATION_PHRASE, scheduledDeletionDate, anonymizeEmail } from '@sitelog/shared';
 
 export const gdprRouter = router({
   /**
@@ -65,7 +66,7 @@ export const gdprRouter = router({
    * If user is sole owner of any org, deletion blocked until ownership transferred.
    */
   requestDeletion: protectedProcedure
-    .input(z.object({ confirmation: z.literal('DELETE MY ACCOUNT') }))
+    .input(z.object({ confirmation: z.literal(DELETE_CONFIRMATION_PHRASE) }))
     .mutation(async ({ ctx, input: _ }) => {
       const userId = ctx.session.user.id;
 
@@ -86,9 +87,9 @@ export const gdprRouter = router({
       }
 
       // Mark deletion requested — full deletion job runs after 30 days
-      const deletionScheduled = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const deletionScheduled = scheduledDeletionDate();
       await db.update(user).set({
-        email: `deleted-${userId}@deleted.invalid`,
+        email: anonymizeEmail(userId),
         name: 'Deleted User',
         passwordHash: null,
       }).where(eq(user.id, userId));
