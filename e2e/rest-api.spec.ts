@@ -62,3 +62,25 @@ test.describe('REST API v1', () => {
     expect(res.status()).toBe(404);
   });
 });
+
+test.describe('OpenAPI spec', () => {
+  test('GET /api/v1/openapi.json returns valid 3.1 spec without auth', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/api/v1/openapi.json');
+    expect(res.ok()).toBeTruthy();
+    const spec = await res.json();
+    expect(spec.openapi).toMatch(/^3\.[01]\./);
+    expect(spec.info.title).toBe('Sitelog API');
+    expect(Object.keys(spec.paths).length).toBeGreaterThanOrEqual(6);
+    expect(spec.components.securitySchemes.ApiKey).toBeDefined();
+  });
+
+  test('GET /api/v1/docs returns HTML reference UI', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/api/v1/docs');
+    expect(res.ok()).toBeTruthy();
+    const html = await res.text();
+    expect(html).toContain('<!doctype html>');
+    expect(html).toContain('Sitelog API');
+  });
+});
