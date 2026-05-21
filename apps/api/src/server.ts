@@ -27,6 +27,10 @@ import('./lib/sentry.js').then(m => m.initSentry()).catch(() => {});
 const { requestIdMiddleware } = await import('./lib/request-id.js');
 app.use('*', requestIdMiddleware() as any);
 
+// Maintenance mode — 503 most paths when MAINTENANCE_MODE=1
+const { maintenanceModeMiddleware } = await import('./lib/maintenance-mode.js');
+app.use('*', maintenanceModeMiddleware());
+
 app.use('*', logger());
 
 // Metrics middleware — counts http requests + errors (excludes /metrics + /healthz to avoid scrape pollution)
