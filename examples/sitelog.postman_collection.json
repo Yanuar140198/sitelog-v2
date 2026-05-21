@@ -1,0 +1,45 @@
+{
+  "info": {
+    "name": "Sitelog API v1",
+    "description": "Import into Postman, set {{base_url}} and {{api_key}} variables in Environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{api_key}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://api.sitelog.app/api/v1", "type": "default" },
+    { "key": "api_key", "value": "sk_live_xxx", "type": "secret" }
+  ],
+  "item": [
+    {
+      "name": "Verify auth",
+      "request": { "method": "GET", "url": "{{base_url}}/me" }
+    },
+    {
+      "name": "List projects",
+      "request": { "method": "GET", "url": "{{base_url}}/projects" }
+    },
+    {
+      "name": "Project detail with totals",
+      "request": { "method": "GET", "url": "{{base_url}}/projects/:id" }
+    },
+    {
+      "name": "Project entries",
+      "request": { "method": "GET", "url": "{{base_url}}/projects/:id/entries" }
+    },
+    {
+      "name": "Entry detail",
+      "request": { "method": "GET", "url": "{{base_url}}/entries/:id" }
+    },
+    {
+      "name": "AHSP catalog",
+      "request": { "method": "GET", "url": "{{base_url}}/ahsp" }
+    },
+    {
+      "name": "OpenAPI spec (no auth)",
+      "request": { "method": "GET", "url": "{{base_url}}/openapi.json", "auth": { "type": "noauth" } }
+    }
+  ]
+}

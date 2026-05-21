@@ -20,6 +20,7 @@ Reference clients + cookbooks for the Sitelog REST API v1.
 | `python-sdk.py` | Python 3 + httpx | Equivalent in Python |
 | `webhook-verify-node.ts` | TypeScript | HMAC-SHA256 verify for incoming webhooks |
 | `webhook-verify-python.py` | Python | HMAC-SHA256 verify for incoming webhooks |
+| `sitelog.postman_collection.json` | Postman | Import → set `{{api_key}}` env var → run |
 
 ## Running
 
