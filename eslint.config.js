@@ -12,6 +12,7 @@ export default tseslint.config(
       'pnpm-lock.yaml',
       '**/sw.ts', '**/sw.js', '**/service-worker.ts',
       'apps/web/public/**',
+      'loadtest/**',     // k6 runtime, not Node/browser
     ],
   },
   js.configs.recommended,
