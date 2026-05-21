@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.6 — 2026-05-22
+
+### Features
+- Privacy settings page (`/app/settings/privacy`) with EXPORT + DELETE flows
+  - Branded UI matching app design system (orange + black + red danger banner)
+  - Indonesian copy explaining GDPR Article 15 + 17
+  - DELETE button gated by exact phrase input
+- Settings layout tab nav: PRIVACY added (8th tab)
+- `@sitelog/shared` GDPR helpers: `DELETE_CONFIRMATION_PHRASE`, `isValidDeletionConfirmation`, `scheduledDeletionDate`, `anonymizeEmail`
+- API gdpr router refactored to import shared helpers (now unit-tested)
+
+### Tests
+- 8 GDPR unit tests (phrase validation, 30-day calc, email anonymization determinism)
+- Total unit tests: 47 → 55
+
 ## v0.2.5 — 2026-05-22
 
 ### Features
