@@ -30,19 +30,45 @@ app.use('*', cors({
 
 app.get('/healthz', (c) => c.json({ ok: true, ts: Date.now() }));
 
-/** Public status — uptime check target. Includes DB ping + deps config. */
+/** Public status — uptime check target. Real probes for DB; config check for opt-in deps. */
 app.get('/status', async (c) => {
   const checks: Record<string, { ok: boolean; latency?: number; error?: string }> = {};
+
+  // Always-on: DB
   try {
     const t0 = Date.now();
     await db.execute(sql`select 1`);
     checks.db = { ok: true, latency: Date.now() - t0 };
   } catch (e: any) { checks.db = { ok: false, error: e.message }; }
-  checks.stripe = { ok: !!stripe };
-  checks.ai = { ok: !!process.env.ANTHROPIC_API_KEY };
-  checks.r2 = { ok: !!process.env.R2_ACCOUNT_ID };
-  const allOk = Object.values(checks).every(c => c.ok);
-  return c.json({ ok: allOk, ts: Date.now(), checks }, allOk ? 200 : 503);
+
+  // Opt-in: Stripe (live ping if key set)
+  if (process.env.STRIPE_SECRET_KEY && stripe) {
+    try {
+      const t0 = Date.now();
+      await stripe.balance.retrieve();
+      checks.stripe = { ok: true, latency: Date.now() - t0 };
+    } catch (e: any) { checks.stripe = { ok: false, error: e.message?.slice(0, 100) }; }
+  } else {
+    checks.stripe = { ok: false, error: 'not configured' };
+  }
+
+  // Opt-in: AI (config check only — don't burn credits)
+  checks.ai = { ok: !!process.env.ANTHROPIC_API_KEY, ...(process.env.ANTHROPIC_API_KEY ? {} : { error: 'not configured' }) };
+
+  // Opt-in: R2 (config check)
+  checks.r2 = { ok: !!process.env.R2_ACCOUNT_ID, ...(process.env.R2_ACCOUNT_ID ? {} : { error: 'not configured' }) };
+
+  // Opt-in: Resend
+  checks.email = { ok: !!process.env.RESEND_API_KEY, ...(process.env.RESEND_API_KEY ? {} : { error: 'not configured' }) };
+
+  // Critical-only: only DB failure returns 503. Optional deps "not configured" = 200.
+  const criticalOk = checks.db.ok;
+  return c.json({
+    ok: criticalOk,
+    ts: Date.now(),
+    version: process.env.npm_package_version ?? '0.2.0',
+    checks,
+  }, criticalOk ? 200 : 503);
 });
 
 /** Auto-tag photos cron — every 10 min. */

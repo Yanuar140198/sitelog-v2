@@ -1,5 +1,43 @@
 # Changelog
 
+## v0.2.0 — 2026-05-22
+
+### Features
+- **REST API v1**: `/api/v1/{me,projects,ahsp,entries}` with Bearer `sk_live_*` auth, scope-based RBAC
+- **Super admin org detail**: `/superadmin/orgs/[slug]` with billing breakdown + force-plan mutation
+- **Docker self-hosted**: `apps/api/Dockerfile` + `docker-compose.yml` for non-Vercel deploys
+- **Deep status endpoint**: live Stripe ping (when key set), version info, critical-only HTTP semantics
+
+### Quality
+- ESLint flat config + typescript-eslint + unused-imports plugin (0 errors / 0 warnings)
+- Husky pre-commit + lint-staged auto-fix
+- @sitelog/shared package: pure math/validation/signing extracted + 41 unit tests
+- Wired shared into API: plan-limits, entry router (validateEntry, geofence), boq router (projectTotal), rest.ts (projectTotal)
+- Playwright E2E: 18 smoke + 6 REST contract tests (65 tests total)
+- 3 GitHub workflows: ci, release-please, deploy-preview
+- Dependabot grouped weekly updates
+- CODEOWNERS + issue/PR templates
+
+### Bug fixes
+- `retention.ts`: drop `.returning()` select shape (postgres-js incompatible)
+- 35 unused imports auto-removed via eslint-plugin-unused-imports
+- AhspDetailDrawer: mark unused projectId arg with underscore prefix
+
+### Docs
+- `SECURITY.md` — threat model + 18 controls + disclosure SLA
+- `CONTRIBUTING.md` — quality gates + code layout + commit style
+- `.env.example` — full env reference
+- README REST API section with 6 example curls
+
+### Stats
+- 23 commits since v0.1.0
+- 200+ source files
+- 9 packages typecheck clean
+- 65 tests total (41 unit + 24 E2E)
+- 3 deploy paths (Vercel, Docker, local)
+
+---
+
 ## v0.1.0 — 2026-05-21 (Initial release)
 
 Production-ready Sitelog construction SaaS. Verified end-to-end via headless browser smoke test.
