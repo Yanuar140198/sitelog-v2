@@ -4,8 +4,8 @@
  * Periodically (e.g. daily cron) aggregate usage_record per org → push to Stripe meter event.
  * Requires STRIPE_METER_EVENT_NAME_* env vars per metric.
  */
-import { db, subscription, organization } from '@sitelog/db';
-import { eq, isNull, not } from 'drizzle-orm';
+import { db, subscription } from '@sitelog/db';
+import { isNull, not } from 'drizzle-orm';
 import { aggregateMonth, type UsageMetric } from './usage.js';
 import { stripe } from './stripe.js';
 

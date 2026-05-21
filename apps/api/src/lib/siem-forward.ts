@@ -6,7 +6,7 @@
  * Production: persist cursor in DB.
  */
 import { db, auditLog, user } from '@sitelog/db';
-import { and, asc, eq, gt } from 'drizzle-orm';
+import { asc, eq, gt } from 'drizzle-orm';
 
 let lastForwardedAt: Date = new Date(0);
 

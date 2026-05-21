@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { and, desc, eq, isNull, count, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, count } from 'drizzle-orm';
 import { router, protectedProcedure } from '../trpc.js';
 import { notification, userPreference } from '@sitelog/db';
 

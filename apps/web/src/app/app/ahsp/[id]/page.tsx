@@ -2,11 +2,10 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { trpc } from '@sitelog/api-client/react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fmtIDR } from '@/lib/utils';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 
 const CATS = ['tenaga', 'bahan', 'peralatan'] as const;
 

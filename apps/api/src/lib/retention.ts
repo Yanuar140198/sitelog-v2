@@ -4,7 +4,7 @@
  * Default: 365 days. Override per org via env or future per-org config.
  */
 import { db, auditLog, webhookDelivery } from '@sitelog/db';
-import { lt, sql } from 'drizzle-orm';
+import { lt } from 'drizzle-orm';
 
 export async function pruneAuditLog(daysToKeep = 365): Promise<{ deletedAudit: number; deletedDeliveries: number }> {
   const cutoff = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);

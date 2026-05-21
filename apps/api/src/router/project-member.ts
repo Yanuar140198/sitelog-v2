@@ -7,7 +7,7 @@
  *   - viewer: only assigned projects
  */
 import { z } from 'zod';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import { projectAssignment, project, user, membership } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';

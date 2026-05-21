@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { router, orgProcedure, requireRole, publicProcedure } from '../trpc.js';
+import { router, requireRole, publicProcedure } from '../trpc.js';
 import { publicShare, project, boqItem, dailyEntry, entryActivity } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { randomBytes } from 'node:crypto';

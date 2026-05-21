@@ -5,7 +5,7 @@
  * Not RBAC at org level — this is platform-level superuser.
  */
 import { z } from 'zod';
-import { desc, eq, count, sql } from 'drizzle-orm';
+import { desc, eq, count } from 'drizzle-orm';
 import { router, protectedProcedure } from '../trpc.js';
 import { organization, subscription, membership, project, user } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';

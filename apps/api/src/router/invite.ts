@@ -3,8 +3,8 @@
  */
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
-import { router, orgProcedure, requireRole, protectedProcedure } from '../trpc.js';
-import { invitation, membership, user, organization } from '@sitelog/db';
+import { router, requireRole, protectedProcedure } from '../trpc.js';
+import { invitation, membership, organization } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { randomBytes } from 'node:crypto';
 import { sendEmail } from '../lib/email.js';

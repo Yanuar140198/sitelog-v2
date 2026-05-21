@@ -2,10 +2,9 @@
 import { use, useState } from 'react';
 import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, X, RotateCcw, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck } from 'lucide-react';
+import { Search, X, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck } from 'lucide-react';
 import { AhspDetailDrawer } from '@/components/boq/ahsp-detail-drawer';
 import { BoqVersionPanel } from '@/components/boq/boq-version-panel';
 import { ProjectFleetPanel } from '@/components/fleet/project-fleet-panel';

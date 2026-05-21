@@ -1,6 +1,7 @@
 // Flat config — ESLint 9+
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 export default tseslint.config(
   {
@@ -17,14 +18,16 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
+    plugins: { 'unused-imports': unusedImports },
     languageOptions: {
       globals: { self: 'readonly', console: 'readonly', URL: 'readonly', Request: 'readonly', Response: 'readonly', fetch: 'readonly', crypto: 'readonly', globalThis: 'readonly', process: 'readonly' },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['warn', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrors: 'none',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'warn',
+      'unused-imports/no-unused-vars': ['warn', {
+        vars: 'all', varsIgnorePattern: '^_',
+        args: 'after-used', argsIgnorePattern: '^_',
       }],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',

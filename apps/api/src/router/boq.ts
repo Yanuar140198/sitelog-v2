@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { and, eq, asc } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import {
-  boqItem, boqResourceOverride, ahspItem, ahspResource, project,
+  boqItem, boqResourceOverride, ahspItem, project,
 } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { audit } from '../lib/audit.js';

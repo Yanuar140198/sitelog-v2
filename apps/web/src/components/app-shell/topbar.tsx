@@ -2,7 +2,7 @@
 import { trpc } from '@sitelog/api-client/react';
 import { useSession, signOut } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, User } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationBell } from './notification-bell';
 

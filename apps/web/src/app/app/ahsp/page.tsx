@@ -5,7 +5,6 @@ import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { fmtIDR } from '@/lib/utils';
 import { Plus, X } from 'lucide-react';
 
 export default function AhspCatalogPage() {

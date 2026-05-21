@@ -9,7 +9,7 @@
  * CPI = EV / AC
  */
 import { z } from 'zod';
-import { and, eq, sql, sum } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { router, orgProcedure } from '../trpc.js';
 import {
   project, boqItem, entryActivity, dailyEntry,

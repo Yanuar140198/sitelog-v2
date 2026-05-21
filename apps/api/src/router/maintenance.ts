@@ -2,7 +2,7 @@
  * Unit maintenance schedule + history.
  */
 import { z } from 'zod';
-import { and, asc, desc, eq, isNull, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import { unitMaintenance, unit } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';

@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { and, desc, eq } from 'drizzle-orm';
-import { router, orgProcedure, requireRole } from '../trpc.js';
+import { router, requireRole } from '../trpc.js';
 import { webhookEndpoint, webhookDelivery } from '@sitelog/db';
-import { TRPCError } from '@trpc/server';
 import { generateWebhookSecret } from '../lib/webhooks.js';
 
 const EVENTS = ['*', 'project.created', 'project.updated', 'boq.changed', 'entry.submitted', 'fleet.assigned', 'invite.created'] as const;

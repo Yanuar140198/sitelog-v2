@@ -4,7 +4,7 @@ import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Wrench, Plus, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { Plus, CheckCircle2, X } from 'lucide-react';
 
 const KIND = ['scheduled', 'breakdown', 'inspection', 'oil_change', 'tire', 'overhaul'] as const;
 

@@ -2,8 +2,8 @@
  * Mobile theme system — light/dark/system with persistence.
  * Provides palette tokens consumed by all screens via useTheme().
  */
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { useColorScheme, Appearance } from 'react-native';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
 import { MMKV } from 'react-native-mmkv';
 
 const storage = new MMKV({ id: 'sitelog-theme' });

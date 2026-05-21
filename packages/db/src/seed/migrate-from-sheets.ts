@@ -18,7 +18,7 @@
  * All projects/units/etc are attached to a single new org (or existing if slug matches).
  */
 import { db } from '../index.js';
-import { organization, membership, user, project, unit, boqItem, boqResourceOverride,
+import { organization, project, unit, boqItem,
          projectFleetAssignment, ahspItem } from '../schema/index.js';
 import { eq, and } from 'drizzle-orm';
 
