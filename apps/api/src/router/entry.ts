@@ -99,15 +99,20 @@ export const entryRouter = router({
         .limit(1);
       if (!proj) throw new TRPCError({ code: 'NOT_FOUND' });
 
+      // Field validation (shared with mobile + unit-tested)
+      const { validateEntry, geofenceDistanceM } = await import('@sitelog/shared');
+      const v = validateEntry({
+        effectiveHours: input.effectiveHours ?? 0,
+        workforce: input.workforce ?? 0,
+        activities: input.activities.map(a => ({ quantity: a.quantity, satuan: a.satuan ?? '' })),
+        photoKeys: input.photoKeys.map(p => p.storageKey),
+      });
+      if (!v.ok) throw new TRPCError({ code: 'BAD_REQUEST', message: v.errors.join('; ') });
+
       // Geofence validation (if configured)
       let geofenceWarning: string | null = null;
       if (proj.siteLat && proj.siteLng && proj.geofenceRadiusM && input.lat !== undefined && input.lng !== undefined) {
-        const lat1 = Number(proj.siteLat), lng1 = Number(proj.siteLng);
-        const R = 6371000;
-        const dLat = (input.lat - lat1) * Math.PI / 180;
-        const dLng = (input.lng - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(input.lat*Math.PI/180) * Math.sin(dLng/2)**2;
-        const distM = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distM = geofenceDistanceM(Number(proj.siteLat), Number(proj.siteLng), input.lat, input.lng);
         if (distM > Number(proj.geofenceRadiusM)) {
           geofenceWarning = `Submitted ${Math.round(distM)}m from site (radius ${proj.geofenceRadiusM}m)`;
         }
