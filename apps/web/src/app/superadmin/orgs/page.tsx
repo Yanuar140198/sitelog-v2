@@ -27,7 +27,7 @@ export default function SuperAdminOrgs() {
         <tbody>
           {orgs.data?.map(o => (
             <tr key={o.id} className="border-b border-white/10 hover:bg-white/5">
-              <td className="px-3 py-2 text-[var(--color-brand)] font-bold">{o.slug}</td>
+              <td className="px-3 py-2 text-[var(--color-brand)] font-bold"><a href={`/superadmin/orgs/${o.slug}`} className="hover:underline">{o.slug}</a></td>
               <td className="px-3 py-2">{o.name}</td>
               <td className="px-3 py-2 uppercase">{o.plan}</td>
               <td className="px-3 py-2 uppercase text-[10px]">{o.subscriptionStatus ?? '—'}</td>

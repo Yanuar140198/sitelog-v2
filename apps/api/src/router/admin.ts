@@ -57,6 +57,30 @@ export const adminRouter = router({
     }));
   }),
 
+  orgDetail: superProcedure.input(z.object({ slug: z.string() })).query(async ({ ctx, input }) => {
+    const [org] = await ctx.db.select().from(organization).where(eq(organization.slug, input.slug)).limit(1);
+    if (!org) throw new TRPCError({ code: 'NOT_FOUND', message: 'Organization not found' });
+    const [sub] = await ctx.db.select().from(subscription).where(eq(subscription.organizationId, org.id)).limit(1);
+    const members = await ctx.db.select({
+      userId: membership.userId, role: membership.role, acceptedAt: membership.acceptedAt,
+      email: user.email, name: user.name,
+    }).from(membership).innerJoin(user, eq(user.id, membership.userId))
+      .where(eq(membership.organizationId, org.id)).orderBy(desc(membership.acceptedAt));
+    const projects = await ctx.db.select({
+      id: project.id, code: project.code, name: project.name, status: project.status, createdAt: project.createdAt,
+    }).from(project).where(eq(project.organizationId, org.id)).orderBy(desc(project.createdAt));
+    return { org, subscription: sub ?? null, members, projects };
+  }),
+
+  setPlan: superProcedure.input(z.object({
+    slug: z.string(), plan: z.enum(['trial', 'starter', 'pro', 'enterprise']),
+  })).mutation(async ({ ctx, input }) => {
+    const [org] = await ctx.db.select().from(organization).where(eq(organization.slug, input.slug)).limit(1);
+    if (!org) throw new TRPCError({ code: 'NOT_FOUND' });
+    await ctx.db.update(organization).set({ plan: input.plan }).where(eq(organization.id, org.id));
+    return { ok: true, plan: input.plan };
+  }),
+
   stats: superProcedure.query(async ({ ctx }) => {
     const [orgCount] = await ctx.db.select({ c: count() }).from(organization);
     const [userCount] = await ctx.db.select({ c: count() }).from(user);
