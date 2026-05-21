@@ -21,6 +21,17 @@ import { eq, sql } from 'drizzle-orm';
 const app = new Hono();
 
 app.use('*', logger());
+
+// Metrics middleware — counts http requests + errors (excludes /metrics + /healthz to avoid scrape pollution)
+const { metricsMiddleware, bump } = await import('./metrics.js');
+app.use('*', async (c, next) => {
+  const path = c.req.path;
+  if (path === '/metrics' || path === '/healthz') return next();
+  await metricsMiddleware()(c, next);
+  if (path.startsWith('/api/trpc/')) bump('trpc_calls_total');
+  else if (path.startsWith('/api/v1/')) bump('rest_calls_total');
+});
+
 app.use('*', cors({
   origin: (origin) => origin ?? 'http://localhost:3000',
   credentials: true,

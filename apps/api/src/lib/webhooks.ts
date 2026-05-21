@@ -68,5 +68,7 @@ export async function dispatchEvent(orgId: string, event: string, data: unknown)
     await db.update(webhookEndpoint).set({
       lastFiredAt: new Date(), lastStatus: respStatus, lastError: delivered ? null : respBody,
     }).where(eq(webhookEndpoint.id, ep.id)).catch(() => {});
+    // Metrics
+    import('../metrics.js').then(m => m.bump('webhook_dispatched_total')).catch(() => {});
   }
 }

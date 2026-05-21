@@ -33,6 +33,8 @@ export const aiRouter = router({
       if (input.context?.projectId) contextNote += `\nCurrent project: ${input.context.projectId}`;
       if (input.context?.ahspKode) contextNote += `\nCurrent AHSP code: ${input.context.ahspKode}`;
 
+      const { bump } = await import('../metrics.js');
+      bump('ai_calls_total');
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
