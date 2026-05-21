@@ -81,6 +81,32 @@ scripts/
 - **Status page**: real-time component health (DB/Stripe/AI/R2)
 - **Cmd+K palette**: navigation + AI mode (`?` prefix)
 
+## REST API v1
+
+Customer-facing integration surface backed by API keys. Generate one at `/app/settings/api-keys`.
+
+```bash
+# Verify auth
+curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/me
+
+# List projects
+curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/projects
+
+# Project detail + computed BOQ totals (subtotal/markup/contingency/PPN/grandTotal)
+curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/projects/{id}
+
+# Daily entries for project
+curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/projects/{id}/entries
+
+# Entry detail with activities
+curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/entries/{id}
+
+# AHSP catalog
+curl -H "Authorization: Bearer sk_live_xxx" https://api.sitelog.app/api/v1/ahsp
+```
+
+Auth: `Bearer sk_live_*`. Scopes: `read` (queries only) | `write` (queries + mutations) | `admin` (full). 401 if missing/expired/revoked.
+
 ## Deploy
 
 See [DEPLOY.md](./DEPLOY.md). Stack = Vercel (web + API) + Neon (DB) + R2 (storage) + Stripe + Resend + Anthropic.

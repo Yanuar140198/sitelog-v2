@@ -153,6 +153,10 @@ app.post('/api/webhooks/stripe', async (c) => {
 // Better Auth handler — mounts /api/auth/sign-up, /api/auth/sign-in, /api/auth/session, etc.
 app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
+// REST API v1 (Bearer sk_live_*) — customer integrations
+const { rest } = await import('./rest.js');
+app.route('/api/v1', rest);
+
 app.use('/api/trpc/*', trpcServer({
   endpoint: '/api/trpc',
   router: appRouter,
