@@ -1,0 +1,41 @@
+{
+  "_description": "Bina Marga 2018 Spesifikasi Umum — Divisi 3 (Pekerjaan Tanah), Divisi 2, Divisi 4, Divisi 5 standard item names. Used by fix-ahsp-jenis.py to replace placeholder jenis values ('-' or bare item numbers) with proper specification names.",
+
+  "2.1":      "Galian untuk Selokan Drainase dan Saluran Air",
+  "2.2":      "Pasangan Batu dengan Mortar",
+  "2.3 (1)":  "Gorong-gorong Pipa Beton Bertulang",
+
+  "3.1 (1)":  "Galian Biasa",
+  "3.1 (1)a": "Galian Biasa (variant)",
+  "3.1 (2)":  "Galian Batu Lunak",
+  "3.1 (3)":  "Galian Batu",
+  "3.1 (4)":  "Galian Struktur (kedalaman 0-2 meter)",
+  "3.1 (5)":  "Galian Struktur (kedalaman 2-4 meter)",
+  "3.1 (6)":  "Galian Struktur (kedalaman 4-6 meter)",
+  "3.1 (7)":  "Galian Perkerasan Berbutir",
+  "3.1 (8)":  "Galian Perkerasan Beton",
+  "3.1 (9)":  "Galian Perkerasan Aspal tanpa Cold Milling",
+
+  "3.2 (1)":  "Timbunan Biasa dari Sumber Galian",
+  "3.2 (2)":  "Timbunan Pilihan dari Sumber Galian",
+  "3.2 (3)":  "Timbunan Pilihan Berbutir",
+
+  "3.3 (1)":  "Penyiapan Badan Jalan",
+  "3.3 (1)a": "Penyiapan Badan Jalan (variant a)",
+  "3.3 (1)b": "Penyiapan Badan Jalan (variant b)",
+  "3.3 (2)":  "Pembersihan dan Pengupasan Lahan",
+
+  "3.4 (1)":  "Pembuangan Bahan Galian",
+
+  "3.5 (1)":  "Geotekstil Separator Kelas 1",
+  "3.5 (1)b": "Geotekstil Stabilisator Kelas 1",
+  "3.5 (1)c": "Geotekstil Filter (untuk Drainase Bawah Permukaan) Kelas 1",
+  "3.5 (2)":  "Geotekstil Separator Kelas 2",
+  "3.5 (2)b": "Geotekstil Stabilisator Kelas 2",
+
+  "4.4 (2)":  "Lapis Pondasi Agregat Kelas A",
+
+  "5.1 (1)":  "Lapis Pondasi Agregat Kelas A",
+  "5.1 (2)":  "Lapis Pondasi Agregat Kelas B",
+  "5.1 (5)":  "Lapis Pondasi Agregat Kelas S"
+}
