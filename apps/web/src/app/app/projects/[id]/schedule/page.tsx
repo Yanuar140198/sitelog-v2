@@ -1,7 +1,9 @@
 'use client';
-import { use, useState } from 'react';
+import { use, useRef, useState } from 'react';
 import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
+import { exportElementAsPng } from '@/lib/image-export';
+import './print.css';
 
 export default function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -25,12 +27,42 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
   });
   const [baselineName, setBaselineName] = useState('');
   const [baselineNotes, setBaselineNotes] = useState('');
+  const sCurveRef = useRef<HTMLElement>(null);
+  const ganttRef = useRef<HTMLElement>(null);
+  const [exporting, setExporting] = useState<'svg' | 'gantt' | null>(null);
 
   if (gantt.error) return <div className="bg-red-100 border-2 border-red-600 p-6 font-mono text-red-700">{gantt.error.message}</div>;
   if (!gantt.data || !curve.data) return <div className="font-mono text-xs text-neutral-500 p-6">Loading…</div>;
 
   const proj = gantt.data.project;
   const scopes = gantt.data.scopes;
+
+  const stamp = () => new Date().toISOString().slice(0, 10);
+  const handleExportSCurve = async () => {
+    const svg = sCurveRef.current?.querySelector('svg');
+    if (!svg) { alert('S-curve not rendered yet'); return; }
+    setExporting('svg');
+    try {
+      await exportElementAsPng(svg as SVGElement, `scurve-${proj.code}-${stamp()}`);
+    } catch (e) {
+      console.error(e);
+      alert('PNG export failed: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setExporting(null);
+    }
+  };
+  const handleExportGantt = async () => {
+    if (!ganttRef.current) return;
+    setExporting('gantt');
+    try {
+      await exportElementAsPng(ganttRef.current, `gantt-${proj.code}-${stamp()}`);
+    } catch (e) {
+      console.error(e);
+      alert('PNG export failed: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setExporting(null);
+    }
+  };
 
   return (
     <div className="space-y-8 p-6 bg-[var(--color-canvas)] min-h-screen">
@@ -41,10 +73,32 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
           {proj.startDate ?? '—'} → {proj.finishDate ?? '—'}
           {proj.baselineSetAt && <> · baseline locked {new Date(proj.baselineSetAt).toLocaleDateString()}</>}
         </p>
+        <div className="flex gap-2 mt-3 print-hide no-print">
+          <button
+            onClick={() => window.print()}
+            className="bg-[var(--color-ink)] hover:bg-[var(--color-brand)] text-white px-4 py-2 font-mono text-[10px] font-bold tracking-wider"
+          >
+            PRINT
+          </button>
+          <button
+            onClick={handleExportSCurve}
+            disabled={exporting !== null}
+            className="border-2 border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-white px-4 py-2 font-mono text-[10px] font-bold tracking-wider disabled:opacity-50"
+          >
+            {exporting === 'svg' ? 'EXPORTING…' : 'EXPORT PNG (S-CURVE)'}
+          </button>
+          <button
+            onClick={handleExportGantt}
+            disabled={exporting !== null}
+            className="border-2 border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-white px-4 py-2 font-mono text-[10px] font-bold tracking-wider disabled:opacity-50"
+          >
+            {exporting === 'gantt' ? 'EXPORTING…' : 'EXPORT PNG (GANTT)'}
+          </button>
+        </div>
       </div>
 
       {/* S-CURVE */}
-      <section className="border-2 border-[var(--color-ink)] bg-white p-6">
+      <section ref={sCurveRef} className="border-2 border-[var(--color-ink)] bg-white p-6">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-ink)] mb-4">S-CURVE — % cumulative progress</h2>
         <SCurve points={curve.data.points} totalValue={curve.data.totalValue} dataDate={curve.data.dataDate} />
         <div className="flex gap-6 mt-3 font-mono text-[10px]">
@@ -56,7 +110,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
       </section>
 
       {/* GANTT */}
-      <section className="border-2 border-[var(--color-ink)] bg-white p-6">
+      <section ref={ganttRef} className="border-2 border-[var(--color-ink)] bg-white p-6">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-ink)] mb-4">GANTT — {scopes.length} scopes</h2>
         <Gantt
           scopes={scopes}
@@ -71,7 +125,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
       </section>
 
       {/* REBASELINE */}
-      <section className="border-2 border-[var(--color-ink)] bg-white p-6">
+      <section data-print-hide className="border-2 border-[var(--color-ink)] bg-white p-6 print-hide-section">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-ink)] mb-4">BASELINE</h2>
         <div className="space-y-3">
           <p className="font-mono text-xs text-neutral-700">

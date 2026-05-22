@@ -1,0 +1,72 @@
+/* Print-friendly styles for the schedule page.
+   Imported via <style> block in page.tsx so Next.js bundles it. */
+
+@media print {
+  /* White paper, full bleed */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide app chrome — sidebar, top nav, and any element marked .no-print */
+  nav,
+  aside,
+  .bg-neutral-900,
+  [data-app-sidebar],
+  [data-app-nav],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Suppress interactive controls */
+  button,
+  .print-hide,
+  input[type="text"],
+  input[type="search"] {
+    display: none !important;
+  }
+
+  /* Hide the rebaseline form section — it isn't useful on paper */
+  section.print-hide-section,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* Each major section starts on a fresh sheet */
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: page;
+    page-break-after: always;
+    border: 1px solid #000 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+  section:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Pull headings tight against the top of each page */
+  h1, h2 {
+    color: #000 !important;
+  }
+
+  /* Remove orange cursor markers and other decorative bits */
+  .bg-\[var\(--color-brand\)\] {
+    background-color: #999 !important;
+  }
+
+  /* Reset overflow so wide Gantt tables render in full */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  /* Compact padding so we get more on a page */
+  .p-6 { padding: 0.5cm !important; }
+
+  @page {
+    size: A3 landscape;
+    margin: 1cm;
+  }
+}

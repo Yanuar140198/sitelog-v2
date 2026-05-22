@@ -287,6 +287,137 @@ rest.get('/me', async (c) => {
   });
 });
 
+function escapeHtml(s: unknown): string {
+  return String(s ?? '').replace(/[&<>"']/g, ch => (
+    ch === '&' ? '&amp;' :
+    ch === '<' ? '&lt;' :
+    ch === '>' ? '&gt;' :
+    ch === '"' ? '&quot;' :
+    '&#39;'
+  ));
+}
+
+// GET /api/v1/projects/:id/summary.html — printable project summary.
+// Browser save-as-PDF via the standard print dialog.
+rest.get('/projects/:id/summary.html', async (c) => {
+  const orgId = c.get('orgId');
+  const id = c.req.param('id');
+  const [proj] = await db.select().from(project)
+    .where(and(eq(project.id, id), eq(project.organizationId, orgId))).limit(1);
+  if (!proj) return err('NOT_FOUND', 'Project not found', 404);
+
+  const items = await db.select({ boq: boqItem, ahsp: ahspItem })
+    .from(boqItem).innerJoin(ahspItem, eq(boqItem.ahspItemId, ahspItem.id))
+    .where(eq(boqItem.projectId, id));
+
+  const ids = items.map(r => r.ahsp.id);
+  const baseline = new Map<string, number>();
+  if (ids.length) {
+    const res = await db.select().from(ahspResource).where(inArray(ahspResource.ahspItemId, ids));
+    for (const r of res) baseline.set(r.ahspItemId, (baseline.get(r.ahspItemId) ?? 0) + Number(r.koefisien) * Number(r.hsd));
+  }
+
+  const lineItems = items.map(r => ({
+    quantity: Number(r.boq.quantity),
+    unitRateOverride: r.boq.unitRateOverride !== null
+      ? Number(r.boq.unitRateOverride)
+      : (baseline.get(r.ahsp.id) ?? 0),
+  }));
+  const totals = projectTotal(lineItems, {
+    markupPct: Number(proj.markupPct ?? 0),
+    contingencyPct: Number(proj.contingencyPct ?? 0),
+    ppnPct: Number(proj.ppnPct ?? 11),
+  });
+  const fmtRp = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+
+  const recentEntries = await db.select().from(dailyEntry)
+    .where(eq(dailyEntry.projectId, id)).orderBy(desc(dailyEntry.entryDate)).limit(10);
+
+  const boqRows = items.slice(0, 50).map(r => {
+    const qty = Number(r.boq.quantity);
+    const rate = r.boq.unitRateOverride !== null
+      ? Number(r.boq.unitRateOverride)
+      : (baseline.get(r.ahsp.id) ?? 0);
+    return `<tr>
+      <td>${escapeHtml(r.ahsp.kode)}</td>
+      <td>${escapeHtml(r.ahsp.section ?? '')}</td>
+      <td style="text-align:right">${qty.toLocaleString('id-ID')}</td>
+      <td>${escapeHtml(r.ahsp.satuan ?? '')}</td>
+      <td style="text-align:right">${fmtRp(rate)}</td>
+      <td style="text-align:right">${fmtRp(qty * rate)}</td>
+    </tr>`;
+  }).join('');
+
+  const entryRows = recentEntries.map(e => `<tr>
+    <td>${escapeHtml(e.entryDate)}</td>
+    <td>${escapeHtml(e.shift)}</td>
+    <td>${escapeHtml(e.weather ?? '')}</td>
+    <td style="text-align:right">${escapeHtml(e.effectiveHours ?? '')}</td>
+    <td style="text-align:right">${escapeHtml(e.workforce ?? '')}</td>
+  </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Sitelog · ${escapeHtml(proj.code)} · Summary</title>
+<style>
+  @page { size: A4; margin: 1.5cm; }
+  * { box-sizing: border-box; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: #111; margin: 0; padding: 2rem; }
+  h1 { font-size: 24pt; margin: 0; }
+  h2 { font-size: 12pt; margin: 1.5rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 2px solid #111; padding-bottom: 0.25rem; }
+  .meta { font-family: ui-monospace, monospace; font-size: 9pt; color: #555; margin-top: 0.5rem; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem; }
+  .kpi { border: 1px solid #111; padding: 0.6rem 0.8rem; }
+  .kpi-label { font-family: ui-monospace, monospace; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.1em; color: #666; }
+  .kpi-value { font-size: 14pt; font-weight: bold; margin-top: 0.2rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 0.5rem; }
+  th, td { padding: 4px 6px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  th { text-align: left; background: #f5f5f5; font-family: ui-monospace, monospace; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; }
+  tfoot td { font-weight: bold; border-top: 2px solid #111; border-bottom: none; }
+  .print-hint { background: #fff7e6; border: 1px solid #d97706; padding: 0.5rem 0.8rem; font-size: 9pt; margin-bottom: 1rem; }
+  @media print { .print-hint { display: none; } body { padding: 0; } }
+</style>
+</head>
+<body>
+  <div class="print-hint">Tip: use your browser's <strong>Print → Save as PDF</strong> to capture this summary.</div>
+  <h1>${escapeHtml(proj.name)}</h1>
+  <div class="meta">${escapeHtml(proj.code)} · ${escapeHtml(proj.status ?? '')} · ${escapeHtml(proj.client ?? '—')} · ${escapeHtml(proj.location ?? '—')}</div>
+  <div class="meta">${escapeHtml(proj.startDate ?? '—')} → ${escapeHtml(proj.finishDate ?? '—')}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">Subtotal</div><div class="kpi-value">${fmtRp(totals.subtotal)}</div></div>
+    <div class="kpi"><div class="kpi-label">Pre-PPN</div><div class="kpi-value">${fmtRp(totals.prePpn)}</div></div>
+    <div class="kpi"><div class="kpi-label">Grand Total</div><div class="kpi-value">${fmtRp(totals.grand)}</div></div>
+    <div class="kpi"><div class="kpi-label">Markup ${Number(proj.markupPct ?? 0)}%</div><div class="kpi-value">${fmtRp(totals.markup)}</div></div>
+    <div class="kpi"><div class="kpi-label">Contingency ${Number(proj.contingencyPct ?? 0)}%</div><div class="kpi-value">${fmtRp(totals.contingency)}</div></div>
+    <div class="kpi"><div class="kpi-label">PPN ${Number(proj.ppnPct ?? 11)}%</div><div class="kpi-value">${fmtRp(totals.ppn)}</div></div>
+  </div>
+
+  <h2>BOQ — ${items.length} items${items.length > 50 ? ' (first 50 shown)' : ''}</h2>
+  <table>
+    <thead><tr><th>Kode</th><th>Section</th><th style="text-align:right">Qty</th><th>Unit</th><th style="text-align:right">Rate</th><th style="text-align:right">Subtotal</th></tr></thead>
+    <tbody>${boqRows || '<tr><td colspan="6" style="text-align:center;color:#999">No BOQ items</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="5" style="text-align:right">GRAND TOTAL</td><td style="text-align:right">${fmtRp(totals.grand)}</td></tr></tfoot>
+  </table>
+
+  <h2>Recent Daily Entries</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Shift</th><th>Weather</th><th style="text-align:right">Hours</th><th style="text-align:right">Workforce</th></tr></thead>
+    <tbody>${entryRows || '<tr><td colspan="5" style="text-align:center;color:#999">No entries yet</td></tr>'}</tbody>
+  </table>
+
+  <div class="meta" style="margin-top:2rem">Generated ${new Date().toISOString()} · Sitelog API v1</div>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  });
+});
+
 // POST /api/v1/debug/echo — echoes request body + headers for integration sanity check
 rest.post('/debug/echo', async (c) => {
   let body: unknown;
