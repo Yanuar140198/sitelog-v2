@@ -57,6 +57,30 @@ export const adminRouter = router({
     }));
   }),
 
+  /** Revoke any API key platform-wide (compromise response). */
+  revokeApiKey: superProcedure
+    .input(z.object({ keyId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { apiKey } = await import('@sitelog/db');
+      await ctx.db.update(apiKey).set({ revokedAt: new Date() }).where(eq(apiKey.id, input.keyId));
+      const { log } = await import('../lib/logger.js');
+      log.warn('admin.revokeApiKey', { actorId: ctx.session.user.id, keyId: input.keyId });
+      return { ok: true };
+    }),
+
+  /** List all API keys platform-wide. */
+  listApiKeys: superProcedure
+    .input(z.object({ limit: z.number().min(1).max(500).default(100) }))
+    .query(async ({ ctx, input }) => {
+      const { apiKey } = await import('@sitelog/db');
+      const { desc: descFn } = await import('drizzle-orm');
+      return ctx.db.select({
+        id: apiKey.id, name: apiKey.name, prefix: apiKey.prefix, scope: apiKey.scope,
+        organizationId: apiKey.organizationId,
+        createdAt: apiKey.createdAt, lastUsedAt: apiKey.lastUsedAt, revokedAt: apiKey.revokedAt,
+      }).from(apiKey).orderBy(descFn(apiKey.createdAt)).limit(input.limit);
+    }),
+
   /** Force-logout a user by killing all sessions. Ops kill switch. */
   killUserSessions: superProcedure
     .input(z.object({ userId: z.string().uuid() }))

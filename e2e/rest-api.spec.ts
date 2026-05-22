@@ -152,6 +152,25 @@ test.describe('CSV exports', () => {
   });
 });
 
+test.describe('Debug echo', () => {
+  test.skip(!API_KEY, 'SITELOG_API_KEY not set');
+
+  test('POST /debug/echo reflects body + redacts authorization', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.post('/api/v1/debug/echo', {
+      headers: { authorization: `Bearer ${API_KEY}`, 'content-type': 'application/json', 'x-trace': 'e2e' },
+      data: { hello: 'world', n: 42 },
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.data.scope).toMatch(/read|write|admin/);
+    expect(body.data.method).toBe('POST');
+    expect(body.data.body).toEqual({ hello: 'world', n: 42 });
+    expect(body.data.headers['x-trace']).toBe('e2e');
+    expect(body.data.headers).not.toHaveProperty('authorization');
+  });
+});
+
 test.describe('OpenAPI spec', () => {
   test('GET /api/v1/openapi.json returns valid 3.1 spec without auth', async () => {
     const ctx = await request.newContext({ baseURL: API_BASE });
