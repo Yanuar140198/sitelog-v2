@@ -221,7 +221,11 @@ app.post('/api/webhooks/stripe', async (c) => {
       }
     }
   } catch (e: any) {
-    console.error('[stripe webhook]', event.type, e);
+    const { log } = await import('./lib/logger.js');
+    const { captureException } = await import('./lib/sentry.js');
+    const reqId = String(c.get('requestId' as never) ?? '');
+    log.error('stripe.webhook.failed', { requestId: reqId, eventType: event.type, error: e.message });
+    captureException(e, { component: 'stripe-webhook', eventType: event.type, requestId: reqId });
     return c.json({ ok: false, error: e.message }, 500);
   }
   return c.json({ received: true });
