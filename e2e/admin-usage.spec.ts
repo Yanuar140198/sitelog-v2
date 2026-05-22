@@ -79,4 +79,22 @@ test.describe('Super admin dashboard recency', () => {
     await expect(page.getByPlaceholder(/Search email or name/i)).toBeVisible();
     await expect(page.getByText(/^ORGS$/).first()).toBeVisible();
   });
+
+  test('api-keys page renders ACTIVE + REVOKED sections', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/api-keys', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('heading', { name: /API Keys/i })).toBeVisible();
+    await expect(page.getByText(/^ACTIVE/i).first()).toBeVisible();
+    await expect(page.getByText(/^REVOKED/i).first()).toBeVisible();
+  });
+
+  test('flags page renders 5 seeded flags', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/flags', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('heading', { name: /Feature Flags/i })).toBeVisible();
+    await expect(page.getByText(/ai-suggest/i)).toBeVisible();
+    await expect(page.getByText(/saml-sso/i)).toBeVisible();
+  });
 });

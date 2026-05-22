@@ -13,6 +13,7 @@ import { AiSuggestPanel } from '@/components/boq/ai-suggest-panel';
 import { ProjectMemberPanel } from '@/components/project/member-panel';
 import { XlsxImport } from '@/components/boq/xlsx-import';
 import { RateSanityPanel } from '@/components/boq/rate-sanity-panel';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 
 export default function ProjectBoqPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -111,9 +112,11 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
             <h2 className="font-display text-lg font-bold">{project.data?.name}</h2>
           </div>
           <div className="flex gap-1">
-            <button onClick={() => setShowAi(true)} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)]" title="AI Suggestions">
-              <Sparkles size={14} />
-            </button>
+            {useFeatureFlag('ai-suggest') && (
+              <button onClick={() => setShowAi(true)} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)]" title="AI Suggestions">
+                <Sparkles size={14} />
+              </button>
+            )}
             <button onClick={() => setShowSanity(true)} className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Rate Sanity Check">
               <ShieldCheck size={14} />
             </button>
