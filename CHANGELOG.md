@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.3 — 2026-05-22
+
+### Tests
+- 15 edge-case unit tests added: empty/zero inputs, SPI extremes, antipodal geofence, plan-quota boundaries
+- Total unit tests: 55 → 70
+- Total tests overall: 99 → **114** (70 unit + 44 E2E)
+
 ## v0.3.2 — 2026-05-22
 
 ### Features
