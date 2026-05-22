@@ -54,4 +54,29 @@ test.describe('Super admin dashboard recency', () => {
     await page.waitForTimeout(1500);
     await expect(page.getByRole('heading', { name: /Webhook Activity/i })).toBeVisible();
   });
+
+  test('audit page renders filter + table', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/audit', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('heading', { name: /Audit Log/i })).toBeVisible();
+    await expect(page.getByPlaceholder(/Filter action prefix/i)).toBeVisible();
+  });
+
+  test('security page renders window toggle + sections', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/security', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('heading', { name: /Failed Logins/i })).toBeVisible();
+    await expect(page.getByText(/TOP OFFENDER IPS/i)).toBeVisible();
+    await expect(page.getByText(/RECENT FAILURES/i)).toBeVisible();
+  });
+
+  test('users page renders search + table header', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/users', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByPlaceholder(/Search email or name/i)).toBeVisible();
+    await expect(page.getByText(/^ORGS$/).first()).toBeVisible();
+  });
 });
