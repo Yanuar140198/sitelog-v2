@@ -171,6 +171,16 @@ export const entryRouter = router({
       }
 
       await audit(ctx, { action: 'entry.submit', resource: 'daily_entry', resourceId: entry.id, after: { date: input.entryDate, shift: input.shift, activities: input.activities.length, geofenceWarning } });
+      const { log } = await import('../lib/logger.js');
+      log.info('entry.submitted', {
+        orgId: ctx.session.organizationId,
+        userId: ctx.session.user.id,
+        projectId: input.projectId,
+        entryId: entry.id,
+        activities: input.activities.length,
+        photos: input.photoKeys.length,
+        geofenceWarning: geofenceWarning ?? undefined,
+      });
       return { id: entry.id, ok: true, geofenceWarning };
     }),
 });
