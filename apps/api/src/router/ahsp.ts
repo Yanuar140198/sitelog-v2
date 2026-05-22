@@ -3,6 +3,9 @@ import { and, eq, or, isNull, asc } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import { ahspItem, ahspInput, ahspKoefisien, ahspResource } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
+import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
+
+const N = (v: unknown) => Number(v ?? 0);
 
 export const ahspRouter = router({
   // Catalog visible to org: global (orgId NULL) + org-owned items
@@ -33,6 +36,96 @@ export const ahspRouter = router({
         ctx.db.select().from(ahspResource).where(eq(ahspResource.ahspItemId, item.id)).orderBy(asc(ahspResource.category), asc(ahspResource.ordinal)),
       ]);
       return { item, inputs, koefisien: koef, resources };
+    }),
+
+  /**
+   * Full breakdown for the AHSP detail sheet view:
+   *   - item header
+   *   - sections A (tenaga), B (bahan), C (peralatan) with per-line subtotals
+   *   - totals: ABC + OHP + final unit rate
+   *   - productivity inputs (read-only params)
+   */
+  detailBreakdown: orgProcedure
+    .input(z.object({ ahspItemId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [item] = await ctx.db.select().from(ahspItem)
+        .where(and(
+          eq(ahspItem.id, input.ahspItemId),
+          or(isNull(ahspItem.organizationId), eq(ahspItem.organizationId, ctx.session.organizationId)),
+        ))
+        .limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const [resources, inputs] = await Promise.all([
+        ctx.db.select().from(ahspResource)
+          .where(eq(ahspResource.ahspItemId, item.id))
+          .orderBy(asc(ahspResource.category), asc(ahspResource.ordinal)),
+        ctx.db.select().from(ahspInput)
+          .where(eq(ahspInput.ahspItemId, item.id))
+          .orderBy(asc(ahspInput.ordinal)),
+      ]);
+
+      const ohpPct = N(item.ohpPct);
+      const totals = computeAhspRate(
+        resources.map(r => ({
+          category: r.category as AhspCategory,
+          koefisien: N(r.koefisien),
+          hsd: N(r.hsd),
+        })),
+        ohpPct,
+      );
+
+      const buildSection = (cat: AhspCategory) => {
+        const rows = resources
+          .filter(r => r.category === cat)
+          .map(r => {
+            const koef = N(r.koefisien);
+            const hsd = N(r.hsd);
+            return {
+              id: r.id,
+              code: r.resourceCode,
+              uraian: r.uraian,
+              satuan: r.satuan,
+              koefisien: koef,
+              hsd,
+              subtotal: koef * hsd,
+            };
+          });
+        const total =
+          cat === 'tenaga' ? totals.totalTenaga :
+          cat === 'bahan' ? totals.totalBahan :
+          totals.totalPeralatan;
+        return { rows, total };
+      };
+
+      return {
+        item: {
+          id: item.id,
+          kode: item.kode,
+          jenis: item.jenis,
+          deskripsi: item.deskripsi,
+          satuan: item.satuan,
+          ohpPct,
+        },
+        sections: {
+          tenaga: buildSection('tenaga'),
+          bahan: buildSection('bahan'),
+          peralatan: buildSection('peralatan'),
+        },
+        totals: {
+          abcSubtotal: totals.jumlahABC,
+          ohpAmount: totals.ohpAmt,
+          unitRate: totals.unitRate,
+        },
+        inputs: inputs.map(i => ({
+          kode: i.kode,
+          variable: i.variable,
+          uraian: i.uraian,
+          nilai: i.nilai === null ? null : N(i.nilai),
+          satuan: i.satuan,
+          sumber: i.sumber,
+        })),
+      };
     }),
 
   // Create custom org-scoped AHSP item

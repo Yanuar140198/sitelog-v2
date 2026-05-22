@@ -1,5 +1,6 @@
 export * from './tenancy';
 export * from './ahsp';
+export * from './resource-master';
 export * from './project';
 export * from './boq';
 export * from './fleet';

@@ -31,6 +31,7 @@ import { announcementRouter } from './announcement.js';
 import { sessionRouter } from './session.js';
 import { featureFlagRouter } from './feature-flag.js';
 import { scheduleRouter } from './schedule.js';
+import { resourceMasterRouter } from './resource-master.js';
 
 export const appRouter = router({
   org: orgRouter,
@@ -65,6 +66,7 @@ export const appRouter = router({
   session: sessionRouter,
   featureFlag: featureFlagRouter,
   schedule: scheduleRouter,
+  resourceMaster: resourceMasterRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -6,6 +6,7 @@ const TABS = [
   { href: '/app/settings/billing', label: 'BILLING' },
   { href: '/app/settings/notifications', label: 'NOTIFICATIONS' },
   { href: '/app/settings/api-keys', label: 'API KEYS' },
+  { href: '/app/settings/resources', label: 'RESOURCES' },
   { href: '/app/settings/webhooks', label: 'WEBHOOKS' },
   { href: '/app/settings/domain', label: 'DOMAIN' },
   { href: '/app/settings/privacy', label: 'PRIVACY' },

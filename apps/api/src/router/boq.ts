@@ -16,6 +16,7 @@ import {
 } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { audit } from '../lib/audit.js';
+import { computeAhspRate } from '../lib/ahsp-rate.js';
 
 const N = (v: unknown) => Number(v ?? 0);
 
@@ -95,25 +96,20 @@ async function resolveRates(
         isOverridden: ov.koef !== null || ov.hsd !== null,
       };
     });
-    const totalTenaga = lines.filter(l => l.category === 'tenaga').reduce((a, l) => a + l.total, 0);
-    const totalBahan = lines.filter(l => l.category === 'bahan').reduce((a, l) => a + l.total, 0);
-    const totalPeralatan = lines.filter(l => l.category === 'peralatan').reduce((a, l) => a + l.total, 0);
-    const jumlahABC = totalTenaga + totalBahan + totalPeralatan;
-    const ohpPct = N(it.ohpPct);
-    const ohpAmt = jumlahABC * ohpPct / 100;
+    const totals = computeAhspRate(lines, N(it.ohpPct));
     out.set(it.id, {
       ahspItemId: it.id,
       kode: it.kode,
       jenis: it.jenis,
       satuan: it.satuan,
       lines,
-      totalTenaga,
-      totalBahan,
-      totalPeralatan,
-      jumlahABC,
-      ohpPct,
-      ohpAmt,
-      unitRate: jumlahABC + ohpAmt,
+      totalTenaga: totals.totalTenaga,
+      totalBahan: totals.totalBahan,
+      totalPeralatan: totals.totalPeralatan,
+      jumlahABC: totals.jumlahABC,
+      ohpPct: totals.ohpPct,
+      ohpAmt: totals.ohpAmt,
+      unitRate: totals.unitRate,
       hasOverride: lines.some(l => l.isOverridden),
     });
   }
@@ -249,6 +245,63 @@ export const boqRouter = router({
       await ctx.db.delete(boqItem).where(eq(boqItem.id, input.id));
       await audit(ctx, { action: 'boq.delete', resource: 'boq_item', resourceId: input.id });
       return { ok: true };
+    }),
+
+  /** Quick-add wizard backend: bulk insert/update many scopes in one shot.
+   *  Uses ON CONFLICT (project_id, ahsp_item_id) so repeated runs update qty. */
+  bulkAddScopes: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      projectId: z.string().uuid(),
+      items: z.array(z.object({
+        ahspItemId: z.string().uuid(),
+        quantity: z.number().nonnegative(),
+        unitRateOverride: z.number().nonnegative().nullable().optional(),
+        note: z.string().optional(),
+      })).min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Ownership check
+      const [proj] = await ctx.db.select().from(project)
+        .where(and(eq(project.id, input.projectId), eq(project.organizationId, ctx.session.organizationId)))
+        .limit(1);
+      if (!proj) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      // Look up which AHSP IDs already exist for this project to compute inserted vs updated counts
+      const existingRows = await ctx.db.select({ ahspItemId: boqItem.ahspItemId }).from(boqItem)
+        .where(eq(boqItem.projectId, input.projectId));
+      const existingIds = new Set(existingRows.map(r => r.ahspItemId));
+
+      let inserted = 0, updated = 0;
+      await ctx.db.transaction(async (tx) => {
+        for (const it of input.items) {
+          await tx.insert(boqItem).values({
+            projectId: input.projectId,
+            ahspItemId: it.ahspItemId,
+            quantity: String(it.quantity),
+            unitRateOverride: it.unitRateOverride === null || it.unitRateOverride === undefined
+              ? null : String(it.unitRateOverride),
+            note: it.note ?? null,
+            createdById: ctx.session.user.id,
+          }).onConflictDoUpdate({
+            target: [boqItem.projectId, boqItem.ahspItemId],
+            set: {
+              quantity: String(it.quantity),
+              unitRateOverride: it.unitRateOverride === null || it.unitRateOverride === undefined
+                ? null : String(it.unitRateOverride),
+              note: it.note ?? null,
+              updatedAt: new Date(),
+            },
+          });
+          if (existingIds.has(it.ahspItemId)) updated++; else inserted++;
+        }
+      });
+      await audit(ctx, {
+        action: 'boq.bulkAdd',
+        resource: 'project',
+        resourceId: input.projectId,
+        after: { inserted, updated, total: input.items.length },
+      });
+      return { inserted, updated };
     }),
 
   /** Import BOQ items from XLSX upload (base64-encoded).

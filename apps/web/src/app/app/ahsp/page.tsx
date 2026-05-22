@@ -53,8 +53,12 @@ export default function AhspCatalogPage() {
               </thead>
               <tbody>{orgItems.map(it => (
                 <tr key={it.id} className="border-b border-neutral-100">
-                  <td className="px-3 py-2 font-bold text-[var(--color-brand)]">{it.kode}</td>
-                  <td className="px-3 py-2">{it.jenis}</td>
+                  <td className="px-3 py-2 font-bold text-[var(--color-brand)]">
+                    <Link href={`/app/ahsp/${it.id}` as any} className="hover:underline">{it.kode}</Link>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Link href={`/app/ahsp/${it.id}` as any} className="hover:underline">{it.jenis}</Link>
+                  </td>
                   <td className="px-3 py-2">{it.satuan}</td>
                   <td className="px-3 py-2 text-neutral-500">{it.section ?? '—'}</td>
                   <td className="px-3 py-2 flex gap-1 justify-end">
@@ -70,11 +74,15 @@ export default function AhspCatalogPage() {
       <Section title={`GLOBAL CATALOG (${globalItems.length})`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-2 max-h-96 overflow-auto">
           {globalItems.map(it => (
-            <div key={it.id} className="border border-neutral-300 p-3 font-mono text-xs">
-              <strong className="text-[var(--color-brand)]">{it.kode}</strong>
+            <Link
+              key={it.id}
+              href={`/app/ahsp/${it.id}` as any}
+              className="block border border-neutral-300 p-3 font-mono text-xs hover:border-[var(--color-brand)] hover:shadow-[4px_4px_0_var(--color-brand)] transition-all"
+            >
+              <strong className="text-[var(--color-brand)] hover:underline">{it.kode}</strong>
               <div className="mt-1">{it.jenis}</div>
               <div className="text-neutral-500 mt-1">{it.section} · {it.satuan}</div>
-            </div>
+            </Link>
           ))}
         </div>
       </Section>

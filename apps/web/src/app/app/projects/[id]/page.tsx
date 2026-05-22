@@ -4,7 +4,7 @@ import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, X, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck, BarChart3 } from 'lucide-react';
+import { Search, X, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck, BarChart3, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { AhspDetailDrawer } from '@/components/boq/ahsp-detail-drawer';
 import { BoqVersionPanel } from '@/components/boq/boq-version-panel';
@@ -145,6 +145,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
               className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Export XLSX">
               <Download size={14} />
             </button>
+            <Link href={`/app/projects/${id}/quick-add`} className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Quick Add Scopes">
+              <Zap size={14} />
+            </Link>
           </div>
         </div>
         <div className="flex-1 overflow-auto">
