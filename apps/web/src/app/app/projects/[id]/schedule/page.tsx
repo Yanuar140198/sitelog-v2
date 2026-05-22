@@ -14,6 +14,15 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
       utils.schedule.invalidate();
     },
   });
+  const updateDates = trpc.schedule.updateDates.useMutation({
+    onSuccess: () => {
+      utils.schedule.gantt.invalidate({ projectId: id });
+      utils.schedule.sCurve.invalidate({ projectId: id });
+    },
+  });
+  const restoreBaseline = trpc.schedule.restoreBaseline.useMutation({
+    onSuccess: () => utils.schedule.invalidate(),
+  });
   const [baselineName, setBaselineName] = useState('');
   const [baselineNotes, setBaselineNotes] = useState('');
 
@@ -49,7 +58,16 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
       {/* GANTT */}
       <section className="border-2 border-[var(--color-ink)] bg-white p-6">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-ink)] mb-4">GANTT — {scopes.length} scopes</h2>
-        <Gantt scopes={scopes} projectStart={proj.startDate} projectFinish={proj.finishDate} dataDate={curve.data.dataDate} />
+        <Gantt
+          scopes={scopes}
+          projectStart={proj.startDate}
+          projectFinish={proj.finishDate}
+          dataDate={curve.data.dataDate}
+          onUpdateDates={(boqItemId, plannedStart, plannedFinish) =>
+            updateDates.mutate({ boqItemId, plannedStart, plannedFinish })
+          }
+          updating={updateDates.isPending}
+        />
       </section>
 
       {/* REBASELINE */}
@@ -88,6 +106,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                 <th className="text-left py-1">NAME</th>
                 <th className="text-left">NOTES</th>
                 <th className="text-right">SET AT</th>
+                <th className="text-right pl-3">ACTION</th>
               </tr></thead>
               <tbody>
                 {baselines.data.map(b => (
@@ -95,6 +114,18 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                     <td className="py-1 font-bold">{b.name}</td>
                     <td className="text-neutral-600">{b.notes ?? '—'}</td>
                     <td className="text-right text-neutral-500">{new Date(b.setAt).toLocaleString()}</td>
+                    <td className="text-right pl-3">
+                      <button
+                        disabled={restoreBaseline.isPending}
+                        onClick={() => {
+                          if (!confirm(`Rollback planned dates to baseline "${b.name}"? Overwrites every scope's planned_start/finish from the snapshot.`)) return;
+                          restoreBaseline.mutate({ baselineId: b.id });
+                        }}
+                        className="border-2 border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider disabled:opacity-50"
+                      >
+                        ROLLBACK
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -144,7 +175,16 @@ function SCurve({ points, totalValue: _tv, dataDate }: { points: any[]; totalVal
   );
 }
 
-function Gantt({ scopes, projectStart, projectFinish, dataDate }: { scopes: any[]; projectStart: string | null; projectFinish: string | null; dataDate: string }) {
+function Gantt({
+  scopes, projectStart, projectFinish, dataDate, onUpdateDates, updating,
+}: {
+  scopes: any[];
+  projectStart: string | null;
+  projectFinish: string | null;
+  dataDate: string;
+  onUpdateDates: (boqItemId: string, plannedStart: string | null, plannedFinish: string | null) => void;
+  updating: boolean;
+}) {
   if (scopes.length === 0) return <p className="font-mono text-xs text-neutral-500">No scopes yet.</p>;
   // Compute timeline bounds across all scopes
   const allDates = scopes.flatMap(s => [s.planned.start, s.planned.finish, s.actual.start, s.actual.finish, s.baseline.start, s.baseline.finish].filter(Boolean));
@@ -164,6 +204,7 @@ function Gantt({ scopes, projectStart, projectFinish, dataDate }: { scopes: any[
           <tr>
             <th className="text-left py-2 pr-3 w-32 sticky left-0 bg-white">SCOPE</th>
             <th className="text-right py-2 pr-3 w-20">%</th>
+            <th className="text-left py-2 pr-3 w-64">PLANNED START / FINISH</th>
             <th className="text-left py-2" style={{ width: W }}>TIMELINE</th>
           </tr>
         </thead>
@@ -176,6 +217,15 @@ function Gantt({ scopes, projectStart, projectFinish, dataDate }: { scopes: any[
               </td>
               <td className="py-1.5 pr-3 text-right">
                 <strong>{s.pctComplete.toFixed(0)}%</strong>
+              </td>
+              <td className="py-1.5 pr-3">
+                <DateEditCell
+                  scopeId={s.id}
+                  initialStart={s.planned.start}
+                  initialFinish={s.planned.finish}
+                  disabled={updating}
+                  onCommit={onUpdateDates}
+                />
               </td>
               <td className="py-1.5">
                 <div className="relative h-6" style={{ width: W }}>
@@ -209,6 +259,46 @@ function Gantt({ scopes, projectStart, projectFinish, dataDate }: { scopes: any[
         <span className="flex items-center gap-1"><span className="inline-block w-4 h-3 bg-[var(--color-brand)] opacity-70"></span>actual</span>
         <span className="flex items-center gap-1"><span className="inline-block w-px h-3 bg-[var(--color-brand)]"></span>data date {dataDate}</span>
       </div>
+    </div>
+  );
+}
+
+function DateEditCell({
+  scopeId, initialStart, initialFinish, disabled, onCommit,
+}: {
+  scopeId: string;
+  initialStart: string | null;
+  initialFinish: string | null;
+  disabled: boolean;
+  onCommit: (boqItemId: string, plannedStart: string | null, plannedFinish: string | null) => void;
+}) {
+  const norm = (v: string | null) => (v ? String(v).slice(0, 10) : '');
+  const [start, setStart] = useState<string>(norm(initialStart));
+  const [finish, setFinish] = useState<string>(norm(initialFinish));
+  const commit = (nextStart: string, nextFinish: string) => {
+    const s = nextStart || null;
+    const f = nextFinish || null;
+    if (s === norm(initialStart) && f === norm(initialFinish)) return;
+    onCommit(scopeId, s, f);
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <input
+        type="date"
+        value={start}
+        disabled={disabled}
+        onChange={e => setStart(e.target.value)}
+        onBlur={() => commit(start, finish)}
+        className="border border-neutral-300 px-1 py-0.5 font-mono text-[10px] w-32 focus:border-[var(--color-brand)] focus:outline-none disabled:opacity-50"
+      />
+      <input
+        type="date"
+        value={finish}
+        disabled={disabled}
+        onChange={e => setFinish(e.target.value)}
+        onBlur={() => commit(start, finish)}
+        className="border border-neutral-300 px-1 py-0.5 font-mono text-[10px] w-32 focus:border-[var(--color-brand)] focus:outline-none disabled:opacity-50"
+      />
     </div>
   );
 }

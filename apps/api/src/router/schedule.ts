@@ -85,23 +85,53 @@ export const scheduleRouter = router({
         .limit(1);
       if (!proj) throw new TRPCError({ code: 'NOT_FOUND' });
 
+      // Compute scope rate from unit_rate_override OR sum(koefisien × hsd) × (1 + ohp_pct/100)
       const rows: any = await db.execute(sql`
         SELECT
           bi.id,
           bi.quantity::float AS qty,
-          COALESCE(bi.unit_rate_override::float, 0) AS rate,
+          COALESCE(
+            bi.unit_rate_override::float,
+            (SELECT SUM(ar.koefisien::float * ar.hsd::float) FROM ahsp_resource ar WHERE ar.ahsp_item_id = bi.ahsp_item_id) * (1 + COALESCE(ai.ohp_pct, 0)::float / 100),
+            0
+          ) AS rate,
           bi.planned_start, bi.planned_finish,
           bi.baseline_start, bi.baseline_finish
         FROM boq_item bi
+        JOIN ahsp_item ai ON ai.id = bi.ahsp_item_id
         WHERE bi.project_id = ${input.projectId}
       `);
       const scopes = (rows.rows ?? rows) as any[];
       const totalValue = scopes.reduce((s, r) => s + r.qty * r.rate, 0);
 
-      // Determine timeline bounds
-      const projStart = proj.startDate ? new Date(proj.startDate) : new Date();
-      const projFinish = proj.finishDate ? new Date(proj.finishDate) : new Date(projStart.getTime() + 90 * 86400_000);
+      // Determine timeline bounds. Include scope planned/baseline dates so buckets
+      // span the actual schedule even when project header dates are blank.
+      const candidateDates: number[] = [];
+      if (proj.startDate) candidateDates.push(new Date(proj.startDate).getTime());
+      if (proj.finishDate) candidateDates.push(new Date(proj.finishDate).getTime());
+      for (const s of scopes) {
+        for (const k of ['planned_start', 'planned_finish', 'baseline_start', 'baseline_finish']) {
+          if (s[k]) candidateDates.push(new Date(s[k]).getTime());
+        }
+      }
       const today = proj.dataDate ? new Date(proj.dataDate) : new Date();
+
+      // Pre-fetch actual entry dates so timeline can extend to include them
+      const entryDateRows: any = await db.execute(sql`
+        SELECT MIN(de.entry_date)::date AS min_d, MAX(de.entry_date)::date AS max_d
+        FROM entry_activity ea
+        JOIN daily_entry de ON de.id = ea.daily_entry_id
+        WHERE de.project_id = ${input.projectId}
+      `);
+      const entryRange = ((entryDateRows.rows ?? entryDateRows) as any[])[0];
+      if (entryRange?.min_d) candidateDates.push(new Date(entryRange.min_d).getTime());
+      if (entryRange?.max_d) candidateDates.push(new Date(entryRange.max_d).getTime());
+
+      const fallbackStart = today.getTime();
+      const projStartT = candidateDates.length ? Math.min(...candidateDates) : fallbackStart;
+      const projFinishT = candidateDates.length ? Math.max(...candidateDates, today.getTime()) : fallbackStart + 90 * 86400_000;
+      const projStart = new Date(projStartT);
+      const projFinish = new Date(projFinishT);
 
       // Generate weekly buckets
       const weekMs = 7 * 86400_000;
@@ -134,29 +164,36 @@ export const scheduleRouter = router({
 
       // Actual cumulative from daily_entry
       const actualRows: any = await db.execute(sql`
-        SELECT de.entry_date::date AS d, SUM(ea.quantity::float * COALESCE(bi.unit_rate_override::float, 0)) AS earned
+        SELECT de.entry_date::date AS d,
+          SUM(ea.quantity::float * COALESCE(
+            bi.unit_rate_override::float,
+            (SELECT SUM(ar.koefisien::float * ar.hsd::float) FROM ahsp_resource ar WHERE ar.ahsp_item_id = bi.ahsp_item_id) * (1 + COALESCE(ai.ohp_pct, 0)::float / 100),
+            0
+          )) AS earned
         FROM entry_activity ea
         JOIN daily_entry de ON de.id = ea.daily_entry_id
         JOIN boq_item bi ON bi.ahsp_item_id = ea.ahsp_item_id AND bi.project_id = de.project_id
+        JOIN ahsp_item ai ON ai.id = bi.ahsp_item_id
         WHERE de.project_id = ${input.projectId}
         GROUP BY de.entry_date
         ORDER BY de.entry_date
       `);
       let cumActual = 0;
-      const actualByDate = new Map<string, number>();
+      const actualSeries: Array<{ d: string; v: number }> = [];
       for (const r of (actualRows.rows ?? actualRows) as any[]) {
         cumActual += Number(r.earned);
-        actualByDate.set(new Date(r.d).toISOString().slice(0, 10), cumActual);
+        actualSeries.push({ d: new Date(r.d).toISOString().slice(0, 10), v: cumActual });
       }
-      // Fill actual into buckets — carry forward latest cumulative <= bucket date
-      let runningActual = 0;
+      // Fill actual into buckets — carry forward latest cumulative <= bucket date.
+      // Only emit actual values up to (and including) the data date.
+      const todayIso = today.toISOString().slice(0, 10);
       for (const b of buckets) {
-        // Find max actual date <= bucket date
-        for (const [d, v] of actualByDate) {
-          if (d <= b.date && v > runningActual) runningActual = v;
+        if (b.date > todayIso) break;
+        let running = 0;
+        for (const { d, v } of actualSeries) {
+          if (d <= b.date) running = v; else break;
         }
-        // Only show actual up to data date
-        if (new Date(b.date) <= today) b.actual = runningActual;
+        b.actual = running;
       }
 
       // Convert to %
@@ -249,6 +286,47 @@ export const scheduleRouter = router({
       log.info('schedule.rebaseline', { projectId: input.projectId, userId: ctx.session.user.id, name: input.name, itemCount: items.length });
 
       return { ok: true, itemCount: items.length };
+    }),
+
+  /** Restore baseline snapshot → overwrite planned_start/finish on each scope from saved snapshot. */
+  restoreBaseline: orgProcedure
+    .input(z.object({ baselineId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [bl] = await db.select().from(scheduleBaseline)
+        .where(eq(scheduleBaseline.id, input.baselineId)).limit(1);
+      if (!bl) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      // Verify baseline's project belongs to caller's org
+      const [proj] = await db.select().from(project)
+        .where(and(eq(project.id, bl.projectId), eq(project.organizationId, ctx.session.organizationId)))
+        .limit(1);
+      if (!proj) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      const snapshot = bl.snapshot as any;
+      const items: Array<{ id: string; plannedStart: string | null; plannedFinish: string | null }> =
+        Array.isArray(snapshot?.items) ? snapshot.items : [];
+
+      let restored = 0;
+      for (const it of items) {
+        if (!it?.id) continue;
+        await db.execute(sql`
+          UPDATE boq_item
+          SET planned_start = ${it.plannedStart ?? null}::date,
+              planned_finish = ${it.plannedFinish ?? null}::date
+          WHERE id = ${it.id}::uuid AND project_id = ${bl.projectId}::uuid
+        `);
+        restored++;
+      }
+
+      const { log } = await import('../lib/logger.js');
+      log.info('schedule.restoreBaseline', {
+        baselineId: input.baselineId,
+        projectId: bl.projectId,
+        userId: ctx.session.user.id,
+        restored,
+      });
+
+      return { ok: true, restored };
     }),
 
   /** List baseline history. */
