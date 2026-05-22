@@ -890,4 +890,144 @@ export const ahspRouter = router({
 
       return issues;
     }),
+
+  /**
+   * Bulk-import AHSP catalog from a xlsx workbook with sheets COVER/INPUT/PARAMETER/CALCULATION
+   * (same structure as D:/FORM/AHSP_NEW_4.xlsx). Owner/admin only.
+   *   - PARAMETER -> upserts resource_master entries in the selected scope.
+   *   - CALCULATION -> walks AHSP blocks. Each block is identified by a "Satuan:" cell in column I.
+   *     For each block: upsert ahsp_item by (org_id, kode), then DELETE+INSERT inputs/koef/resources.
+   * dryRun=true: parse + validate only, no writes.
+   * orgScope=true: import as org-scoped. false: import as global (organizationId=null) — owner role required.
+   */
+  importFromXlsxBase64: requireRole('owner', 'admin')
+    .input(z.object({
+      xlsxBase64: z.string().min(1),
+      orgScope: z.boolean().default(true),
+      dryRun: z.boolean().default(false),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Global imports are reserved for the most senior role (no super_admin role exists today)
+      if (!input.orgScope && ctx.session.role !== 'owner') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Global imports require owner role.' });
+      }
+
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      const buf = Buffer.from(input.xlsxBase64, 'base64');
+      try {
+        await wb.xlsx.load(buf as any);
+      } catch (e: any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `Invalid xlsx: ${e?.message ?? e}` });
+      }
+      const paramWs = wb.getWorksheet('PARAMETER');
+      const calcWs = wb.getWorksheet('CALCULATION');
+      if (!paramWs || !calcWs) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workbook must contain PARAMETER and CALCULATION sheets.' });
+      }
+
+      const errors: string[] = [];
+      let resources: ParsedResource[] = [];
+      let items: ParsedAhsp[] = [];
+      try { resources = parseParameterSheet(paramWs); } catch (e: any) { errors.push(`PARAMETER parse: ${e?.message ?? e}`); }
+      try { items = parseCalculationSheet(calcWs); } catch (e: any) { errors.push(`CALCULATION parse: ${e?.message ?? e}`); }
+
+      for (const it of items) {
+        if (!it.kode) errors.push(`AHSP missing kode: ${it.sourceKode}`);
+        if (!it.satuan) errors.push(`AHSP "${it.kode}" missing satuan`);
+      }
+
+      if (input.dryRun) {
+        return { dryRun: true, resourcesImported: resources.length, itemsImported: items.length, errors };
+      }
+      if (errors.length && items.length === 0) {
+        return { dryRun: false, resourcesImported: 0, itemsImported: 0, errors };
+      }
+
+      const targetOrgId: string | null = input.orgScope ? ctx.session.organizationId : null;
+      let resourcesImported = 0;
+      let itemsImported = 0;
+
+      await ctx.db.transaction(async (tx) => {
+        // 1) Upsert resource_master entries — emulated upsert by (organization_id, kode) since
+        //    no unique constraint is guaranteed at the schema level.
+        for (const r of resources) {
+          const where = targetOrgId === null
+            ? and(isNull(resourceMaster.organizationId), eq(resourceMaster.kode, r.kode))
+            : and(eq(resourceMaster.organizationId, targetOrgId), eq(resourceMaster.kode, r.kode));
+          const existing = await tx.select({ id: resourceMaster.id }).from(resourceMaster).where(where!).limit(1);
+          if (existing.length) {
+            await tx.update(resourceMaster).set({
+              nama: r.nama, category: r.category, satuan: r.satuan,
+              defaultHsd: String(r.hsd), notes: r.catatan || null,
+              updatedAt: new Date(),
+            }).where(eq(resourceMaster.id, existing[0].id));
+          } else {
+            await tx.insert(resourceMaster).values({
+              organizationId: targetOrgId,
+              kode: r.kode, nama: r.nama, category: r.category, satuan: r.satuan,
+              defaultHsd: String(r.hsd), notes: r.catatan || null,
+            });
+          }
+          resourcesImported++;
+        }
+
+        // 2) Upsert each ahsp_item; replace its inputs/koefisien/resources atomically.
+        for (const it of items) {
+          if (!it.kode || !it.satuan) continue;
+          const where = targetOrgId === null
+            ? and(isNull(ahspItem.organizationId), eq(ahspItem.kode, it.kode))
+            : and(eq(ahspItem.organizationId, targetOrgId), eq(ahspItem.kode, it.kode));
+          const existing = await tx.select({ id: ahspItem.id }).from(ahspItem).where(where!).limit(1);
+          let ahspId: string;
+          if (existing.length) {
+            ahspId = existing[0].id;
+            await tx.update(ahspItem).set({
+              label: it.label, sourceKode: it.sourceKode,
+              jenis: it.jenis, satuan: it.satuan,
+              ohpPct: String(it.ohpPct), updatedAt: new Date(),
+            }).where(eq(ahspItem.id, ahspId));
+          } else {
+            const [row] = await tx.insert(ahspItem).values({
+              organizationId: targetOrgId,
+              kode: it.kode, label: it.label, sourceKode: it.sourceKode,
+              jenis: it.jenis, satuan: it.satuan, ohpPct: String(it.ohpPct),
+            }).returning({ id: ahspItem.id });
+            ahspId = row.id;
+          }
+
+          await tx.delete(ahspInput).where(eq(ahspInput.ahspItemId, ahspId));
+          await tx.delete(ahspKoefisien).where(eq(ahspKoefisien.ahspItemId, ahspId));
+          await tx.delete(ahspResource).where(eq(ahspResource.ahspItemId, ahspId));
+
+          if (it.inputs.length) {
+            await tx.insert(ahspInput).values(it.inputs.map(i => ({
+              ahspItemId: ahspId, ordinal: i.ordinal, kode: i.kode,
+              variable: i.variable, uraian: i.uraian,
+              nilai: i.nilai === null ? null : String(i.nilai),
+              satuan: i.satuan || null, sumber: i.sumber || null,
+            })));
+          }
+          if (it.koefisien.length) {
+            await tx.insert(ahspKoefisien).values(it.koefisien.map(k => ({
+              ahspItemId: ahspId, ordinal: k.ordinal, kode: k.kode,
+              variable: k.variable, uraian: k.uraian || null,
+              nilai: k.nilai === null ? null : String(k.nilai),
+              satuan: k.satuan || null, formula: k.formula || null,
+            })));
+          }
+          if (it.resources.length) {
+            await tx.insert(ahspResource).values(it.resources.map(r => ({
+              ahspItemId: ahspId, category: r.category, ordinal: r.ordinal,
+              resourceCode: r.resourceCode, uraian: r.uraian,
+              koefisien: String(r.koefisien),
+              satuan: r.satuan || null, hsd: String(r.hsd),
+            })));
+          }
+          itemsImported++;
+        }
+      });
+
+      return { dryRun: false, resourcesImported, itemsImported, errors };
+    }),
 });
