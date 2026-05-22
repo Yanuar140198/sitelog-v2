@@ -89,6 +89,17 @@ test.describe('Super admin dashboard recency', () => {
     await expect(page.getByText(/^REVOKED/i).first()).toBeVisible();
   });
 
+  test('org detail page renders all 5 sections', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/orgs/demo-construction', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2000);
+    await expect(page.getByText(/^BILLING$/)).toBeVisible();
+    await expect(page.getByText(/^MEMBERS \(/)).toBeVisible();
+    await expect(page.getByText(/^PROJECTS \(/)).toBeVisible();
+    await expect(page.getByText(/FEATURE FLAG OVERRIDES/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /FORCE ON/i }).first()).toBeVisible();
+  });
+
   test('flags page renders 5 seeded flags', async ({ page }) => {
     await login(page);
     await page.goto('/superadmin/flags', { waitUntil: 'domcontentloaded' });
