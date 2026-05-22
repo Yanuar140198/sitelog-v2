@@ -1,9 +1,14 @@
 {
-  "_description": "Bina Marga 2018 Spesifikasi Umum — Divisi 3 (Pekerjaan Tanah), Divisi 2, Divisi 4, Divisi 5 standard item names. Used by fix-ahsp-jenis.py to replace placeholder jenis values ('-' or bare item numbers) with proper specification names.",
+  "_description": "Bina Marga 2018 Spesifikasi Umum — Divisi 2-7 standard item names. Used by fix-ahsp-jenis.py / classify-ahsp-remaining.py to replace placeholder jenis values ('-', bare item numbers, or '(belum terklasifikasi …)') with proper specification names.",
 
   "2.1":      "Galian untuk Selokan Drainase dan Saluran Air",
+  "2.1 (1)":  "Galian untuk Saluran Drainase",
   "2.2":      "Pasangan Batu dengan Mortar",
+  "2.2 (1)":  "Pasangan Batu dengan Mortar",
   "2.3 (1)":  "Gorong-gorong Pipa Beton Bertulang",
+  "2.3 (2)":  "Gorong-gorong Pipa Beton Bertulang Diameter Dalam 80 cm",
+  "2.3 (3)":  "Gorong-gorong Pipa Beton Bertulang Diameter Dalam 100 cm",
+  "2.4 (1)":  "Drainase Porous",
 
   "3.1 (1)":  "Galian Biasa",
   "3.1 (1)a": "Galian Biasa (variant)",
@@ -33,9 +38,27 @@
   "3.5 (2)":  "Geotekstil Separator Kelas 2",
   "3.5 (2)b": "Geotekstil Stabilisator Kelas 2",
 
+  "4.2 (1)":  "Lapis Pondasi Agregat Kelas A",
+  "4.2 (2)":  "Lapis Pondasi Agregat Kelas B",
+  "4.2 (3)":  "Lapis Pondasi Agregat Kelas S",
   "4.4 (2)":  "Lapis Pondasi Agregat Kelas A",
 
   "5.1 (1)":  "Lapis Pondasi Agregat Kelas A",
   "5.1 (2)":  "Lapis Pondasi Agregat Kelas B",
-  "5.1 (5)":  "Lapis Pondasi Agregat Kelas S"
+  "5.1 (5)":  "Lapis Pondasi Agregat Kelas S",
+  "5.3 (1)":  "Perkerasan Beton Semen",
+
+  "6.1 (1)(a)": "Lapis Resap Pengikat - Aspal Cair/Emulsi",
+  "6.1 (2)(a)": "Lapis Perekat - Aspal Cair/Emulsi",
+  "6.3 (5a)":   "Laston Lapis Aus AC-WC",
+  "6.3 (6a)":   "Laston Lapis Antara AC-BC",
+  "6.3 (7a)":   "Laston Lapis Pondasi AC-Base",
+
+  "7.1 (1)":  "Beton Mutu Sedang fc'=20 MPa",
+  "7.1 (5)":  "Beton Mutu Tinggi fc'=30 MPa",
+  "7.3 (1)":  "Baja Tulangan Polos-BjTP 280",
+  "7.3 (3)":  "Baja Tulangan Ulir-BjTS 420A",
+  "7.9 (1)":  "Pasangan Batu",
+  "7.10 (1)": "Pasangan Batu Kosong",
+  "7.15 (1)": "Pembongkaran Pasangan Batu"
 }

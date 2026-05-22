@@ -29,6 +29,7 @@ export const ahspItem = pgTable('ahsp_item', {
   jenis: varchar('jenis', { length: 255 }).notNull(),     // work description
   deskripsi: text('deskripsi'),
   satuan: varchar('satuan', { length: 16 }).notNull(),    // unit: M3, M2, m, Jam, etc
+  category: varchar('category', { length: 64 }),          // filter bucket: galian/timbunan/perkerasan/drainase/struktur/pembersihan/haul/finishing/overhead/lain-lain
   ohpPct: numeric('ohp_pct', { precision: 5, scale: 2 }).notNull().default('0'),  // Overhead+Profit %
   metadata: text('metadata'),                             // JSON for extra fields
   archivedAt: timestamp('archived_at'),                   // soft-archive (null = active)
