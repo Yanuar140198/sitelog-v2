@@ -45,6 +45,30 @@ test.describe('Observability endpoints', () => {
   });
 });
 
+test.describe('Public stats + badges', () => {
+  test('GET /stats returns counts JSON', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/stats');
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(typeof body.orgs).toBe('number');
+    expect(typeof body.projects).toBe('number');
+    expect(typeof body.entries).toBe('number');
+  });
+
+  test('GET /badge/projects + /badge/entries', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    for (const path of ['/badge/projects', '/badge/entries']) {
+      const res = await ctx.get(path);
+      expect(res.ok()).toBeTruthy();
+      const b = await res.json();
+      expect(b.schemaVersion).toBe(1);
+      expect(b.color).toBe('blue');
+      expect(b.message).toMatch(/^\d+$/);
+    }
+  });
+});
+
 test.describe('Public badge + changelog', () => {
   test('GET /badge/status returns shields.io endpoint JSON', async () => {
     const ctx = await request.newContext({ baseURL: API_BASE });

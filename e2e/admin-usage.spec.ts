@@ -24,13 +24,25 @@ test.describe('Settings → Usage', () => {
   });
 });
 
+test.describe('Settings → Security (sessions)', () => {
+  test('renders ACTIVE SESSIONS section with at least 1 session', async ({ page }) => {
+    await login(page);
+    await page.goto('/app/settings/security', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2000);
+    await expect(page.getByText(/ACTIVE SESSIONS/i)).toBeVisible();
+    await expect(page.getByText(/TWO-FACTOR AUTHENTICATION/i)).toBeVisible();
+    // At least one CURRENT badge should show
+    await expect(page.getByText(/CURRENT/i).first()).toBeVisible();
+  });
+});
+
 test.describe('Super admin dashboard recency', () => {
   test('renders KPI cards with growth subtitles + recency row', async ({ page }) => {
     await login(page);
     await page.goto('/superadmin', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
     await expect(page.getByText(/^ORGANIZATIONS$/).first()).toBeVisible();
-    await expect(page.getByText(/^USERS$/)).toBeVisible();
+    await expect(page.getByText(/^USERS$/).first()).toBeVisible();
     await expect(page.getByText(/ENTRIES \(24h\)/i)).toBeVisible();
     await expect(page.getByText(/AUDIT \(24h\)/i)).toBeVisible();
     await expect(page.getByText(/WEBHOOKS ACTIVE/i)).toBeVisible();
