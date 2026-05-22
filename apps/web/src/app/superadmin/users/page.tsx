@@ -5,6 +5,7 @@ import { useState } from 'react';
 export default function SuperAdminUsers() {
   const [q, setQ] = useState('');
   const list = trpc.admin.searchUsers.useQuery({ q, limit: 50 }, { retry: false });
+  const killSessions = trpc.admin.killUserSessions.useMutation();
 
   if (list.error) return <div className="bg-red-900 border-2 border-red-600 p-6 font-mono text-red-200">{list.error.message}</div>;
 
@@ -31,6 +32,7 @@ export default function SuperAdminUsers() {
             <th className="text-right px-3 py-2 tracking-wider">ORGS</th>
             <th className="text-left px-3 py-2 tracking-wider">CREATED</th>
             <th className="text-left px-3 py-2 tracking-wider">LAST LOGIN</th>
+            <th className="text-right px-3 py-2 tracking-wider">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -41,10 +43,19 @@ export default function SuperAdminUsers() {
               <td className="px-3 py-2 text-right font-bold">{u.org_count}</td>
               <td className="px-3 py-2 text-white/70">{new Date(u.created_at).toLocaleDateString()}</td>
               <td className="px-3 py-2 text-white/70">{u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
+              <td className="px-3 py-2 text-right">
+                <button
+                  onClick={() => confirm(`Kill all sessions for ${u.email}?`) && killSessions.mutate({ userId: u.id })}
+                  className="text-red-400 hover:text-red-200 text-[10px] underline"
+                  title="Revoke all sessions (force re-login)"
+                >
+                  KILL SESSIONS
+                </button>
+              </td>
             </tr>
           ))}
           {list.data?.length === 0 && (
-            <tr><td colSpan={5} className="text-center py-8 text-white/50">No matches.</td></tr>
+            <tr><td colSpan={6} className="text-center py-8 text-white/50">No matches.</td></tr>
           )}
         </tbody>
       </table>
