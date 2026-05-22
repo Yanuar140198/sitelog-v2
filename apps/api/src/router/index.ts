@@ -31,6 +31,13 @@ import { sessionRouter } from './session.js';
 import { featureFlagRouter } from './feature-flag.js';
 import { scheduleRouter } from './schedule.js';
 import { resourceMasterRouter } from './resource-master.js';
+import { crewRouter } from './crew.js';
+import { hseRouter } from './hse.js';
+import { materialRouter } from './material.js';
+import { subcontractorRouter } from './subcontractor.js';
+import { variationOrderRouter } from './variation-order.js';
+import { qcRouter } from './qc.js';
+import { weatherRouter } from './weather.js';
 
 export const appRouter = router({
   org: orgRouter,
@@ -65,6 +72,13 @@ export const appRouter = router({
   featureFlag: featureFlagRouter,
   schedule: scheduleRouter,
   resourceMaster: resourceMasterRouter,
+  crew: crewRouter,
+  hse: hseRouter,
+  material: materialRouter,
+  subcontractor: subcontractorRouter,
+  variationOrder: variationOrderRouter,
+  qc: qcRouter,
+  weather: weatherRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -313,6 +313,15 @@ function WeatherModal({ title, projectId, initial, onClose, onSubmit, pending }:
   );
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <div className="font-mono text-[10px] tracking-wider text-neutral-500 mb-1">{label}</div>
+      {children}
+    </label>
+  );
+}
+
 function CondSelect({ value, onChange }: { value: Condition | ''; onChange: (v: Condition | '') => void }) {
   return (
     <select value={value} onChange={e => onChange(e.target.value as Condition | '')} className="w-full border border-[var(--color-ink)] px-2 py-1">

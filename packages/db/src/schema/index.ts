@@ -18,3 +18,4 @@ export * from './qc';
 export * from './variation-order';
 export * from './subcontractor';
 export * from './weather';
+export * from './crew';

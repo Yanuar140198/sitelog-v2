@@ -400,6 +400,7 @@ function TestDrawer({ id, onClose, onRetest }: {
       utils.qc.get.invalidate({ id });
       utils.qc.list.invalidate();
       utils.qc.summary.invalidate();
+      if (!orig) return;
       // Normalize snake_case ↔ camelCase from DB to seed the new test modal
       onRetest({
         id: orig.id,
