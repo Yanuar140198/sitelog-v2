@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { and, eq, or, isNull, asc, desc, max, inArray, sql } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
-import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, resourceMaster, user } from '@sitelog/db';
+import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, ahspPin, resourceMaster, user } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
 
@@ -457,6 +457,7 @@ export const ahspRouter = router({
           ai.deskripsi,
           ai.satuan,
           ai.ohp_pct,
+          ai.archived_at,
           ai.created_at,
           ai.updated_at,
           COALESCE((
@@ -485,6 +486,7 @@ export const ahspRouter = router({
         deskripsi: (r.deskripsi as string) ?? null,
         satuan: r.satuan as string,
         ohpPct: Number(r.ohp_pct ?? 0),
+        archivedAt: r.archived_at ?? null,
         computedRate: Number(r.computed_rate ?? 0),
         usedInProjects: Number(r.used_in_projects ?? 0),
         createdAt: r.created_at,
@@ -1368,5 +1370,248 @@ export const ahspRouter = router({
       }
       await snapshotAhsp(ctx.db, ver.ahspItemId, ctx.session.user.id, `restored from v${ver.versionNumber}`);
       return { ok: true, restoredFrom: ver.versionNumber };
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Quick inline rename + bulk archive + pins (catalog page UX)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Inline-rename the `jenis` field of an org-owned AHSP item. Global items (org NULL) are
+   * read-only here — owner role is required to override. Snapshots after change.
+   */
+  quickRenameJenis: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      id: z.string().uuid(),
+      newJenis: z.string().min(3).max(200),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [item] = await ctx.db.select().from(ahspItem).where(eq(ahspItem.id, input.id)).limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (item.organizationId === null) {
+        if (ctx.session.role !== 'owner') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Global AHSP rename requires owner role.' });
+        }
+      } else if (item.organizationId !== ctx.session.organizationId) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Item belongs to another organization.' });
+      }
+      const [row] = await ctx.db.update(ahspItem)
+        .set({ jenis: input.newJenis, updatedAt: new Date() })
+        .where(eq(ahspItem.id, input.id))
+        .returning();
+      await snapshotAhsp(ctx.db, input.id, ctx.session.user.id, `rename jenis`);
+      return row;
+    }),
+
+  /**
+   * Soft-archive a batch of org-owned AHSP items (sets archived_at = now()).
+   * Global items in the list are silently skipped.
+   */
+  bulkArchive: requireRole('owner', 'admin')
+    .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.update(ahspItem)
+        .set({ archivedAt: new Date(), updatedAt: new Date() })
+        .where(and(
+          inArray(ahspItem.id, input.ids),
+          eq(ahspItem.organizationId, ctx.session.organizationId),
+        ))
+        .returning();
+      return { archived: result.length };
+    }),
+
+  /**
+   * Un-archive: NULL archived_at for the given org-owned items.
+   */
+  bulkUnarchive: requireRole('owner', 'admin')
+    .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.update(ahspItem)
+        .set({ archivedAt: null, updatedAt: new Date() })
+        .where(and(
+          inArray(ahspItem.id, input.ids),
+          eq(ahspItem.organizationId, ctx.session.organizationId),
+        ))
+        .returning();
+      return { unarchived: result.length };
+    }),
+
+  /**
+   * Toggle a per-user pin on an AHSP item. Insert if missing, delete if present.
+   * Pin scope is the user; visibility is the org (item must be visible to org).
+   */
+  togglePin: orgProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [item] = await ctx.db.select({ id: ahspItem.id }).from(ahspItem)
+        .where(and(
+          eq(ahspItem.id, input.id),
+          or(isNull(ahspItem.organizationId), eq(ahspItem.organizationId, ctx.session.organizationId)),
+        ))
+        .limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+      const userId = ctx.session.user.id;
+      const [existing] = await ctx.db.select().from(ahspPin)
+        .where(and(eq(ahspPin.userId, userId), eq(ahspPin.ahspItemId, input.id)))
+        .limit(1);
+      if (existing) {
+        await ctx.db.delete(ahspPin)
+          .where(and(eq(ahspPin.userId, userId), eq(ahspPin.ahspItemId, input.id)));
+        return { pinned: false };
+      }
+      await ctx.db.insert(ahspPin).values({ userId, ahspItemId: input.id });
+      return { pinned: true };
+    }),
+
+  /**
+   * Returns the set of ahsp_item_id values pinned by the current user (org-scoped visibility).
+   */
+  myPins: orgProcedure
+    .query(async ({ ctx }) => {
+      const rows = await ctx.db.select({ ahspItemId: ahspPin.ahspItemId })
+        .from(ahspPin)
+        .where(eq(ahspPin.userId, ctx.session.user.id));
+      return rows.map(r => r.ahspItemId);
+    }),
+
+  /**
+   * Find duplicate AHSP items grouped by case-insensitive (jenis, satuan).
+   * Returns 2+ matching items per group with computed unit rate and project-usage count
+   * so the user can pick a canonical row to keep before merging.
+   */
+  findDuplicates: orgProcedure
+    .query(async ({ ctx }) => {
+      const orgId = ctx.session.organizationId;
+      const result = await ctx.db.execute(sql`
+        WITH visible AS (
+          SELECT ai.id, ai.kode, ai.jenis, ai.satuan, ai.ohp_pct,
+                 TRIM(LOWER(ai.jenis))  AS jkey,
+                 TRIM(LOWER(ai.satuan)) AS skey
+          FROM ahsp_item ai
+          WHERE (ai.organization_id IS NULL OR ai.organization_id = ${orgId})
+            AND ai.jenis IS NOT NULL AND TRIM(ai.jenis) <> ''
+            AND ai.satuan IS NOT NULL AND TRIM(ai.satuan) <> ''
+        ),
+        dup_keys AS (
+          SELECT jkey, skey FROM visible
+          GROUP BY jkey, skey HAVING COUNT(*) > 1
+        )
+        SELECT v.id, v.kode, v.jenis, v.satuan, v.jkey, v.skey,
+          COALESCE((
+            SELECT SUM(ar.koefisien::float8 * ar.hsd::float8)
+            FROM ahsp_resource ar WHERE ar.ahsp_item_id = v.id
+          ), 0) * (1 + COALESCE(v.ohp_pct, 0)::float8 / 100) AS computed_rate,
+          (
+            SELECT COUNT(DISTINCT p.id)::int
+            FROM boq_item bi JOIN project p ON p.id = bi.project_id
+            WHERE bi.ahsp_item_id = v.id AND p.organization_id = ${orgId}
+          ) AS used_in_projects
+        FROM visible v
+        JOIN dup_keys d ON d.jkey = v.jkey AND d.skey = v.skey
+        ORDER BY v.jkey, v.skey, used_in_projects DESC, computed_rate DESC
+      `);
+      const rows = ((result as any).rows ?? result) as any[];
+
+      const groups = new Map<string, {
+        jenis: string;
+        satuan: string;
+        items: Array<{ id: string; kode: string; computedRate: number; usedInProjects: number }>;
+      }>();
+      for (const r of rows) {
+        const key = `${r.jkey}\x1f${r.skey}`;
+        const g = groups.get(key) ?? {
+          jenis: r.jenis as string,
+          satuan: r.satuan as string,
+          items: [],
+        };
+        g.items.push({
+          id: String(r.id),
+          kode: r.kode as string,
+          computedRate: Number(r.computed_rate ?? 0),
+          usedInProjects: Number(r.used_in_projects ?? 0),
+        });
+        groups.set(key, g);
+      }
+      return Array.from(groups.values());
+    }),
+
+  /**
+   * Merge duplicate AHSP items into one canonical row.
+   *   1. Reroutes every boq_item.ahsp_item_id reference from removeIds -> keepId.
+   *   2. Deletes the removed ahsp_item rows (CASCADE drops their inputs/koefisien/resources).
+   *   3. Snapshots the keep-item with a summary of merged codes for the audit trail.
+   * Owner/admin only.
+   */
+  mergeItems: requireRole('owner', 'admin')
+    .input(z.object({
+      keepId: z.string().uuid(),
+      removeIds: z.array(z.string().uuid()).min(1),
+      reason: z.string().max(200).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const orgId = ctx.session.organizationId;
+      if (input.removeIds.includes(input.keepId)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'keepId cannot also appear in removeIds' });
+      }
+
+      // All ids (keep + removed) must be org-owned editable items
+      const all = await ctx.db.select().from(ahspItem)
+        .where(and(
+          inArray(ahspItem.id, [input.keepId, ...input.removeIds]),
+          eq(ahspItem.organizationId, orgId),
+        ));
+      if (all.length !== input.removeIds.length + 1) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'All items must be org-owned (global catalog items cannot be merged).',
+        });
+      }
+      const removedKodes = all
+        .filter(i => input.removeIds.includes(i.id))
+        .map(i => i.kode);
+
+      let merged = 0;
+      let projectsAffected = 0;
+      await ctx.db.transaction(async (tx) => {
+        // Count distinct projects that referenced any of the removed items (before reroute)
+        const projRes = await tx.execute(sql`
+          SELECT COUNT(DISTINCT bi.project_id)::int AS n
+          FROM boq_item bi
+          WHERE bi.ahsp_item_id IN ${sql.raw(`('${input.removeIds.join("','")}')`)}
+        `);
+        const projRow = ((projRes as any).rows ?? projRes)[0];
+        projectsAffected = Number(projRow?.n ?? 0);
+
+        // Reroute boq_item references. boq_item has UNIQUE(project_id, ahsp_item_id), so
+        // collisions (a project already references keepId) must be resolved by deleting the
+        // duplicate boq line that points to the removed id.
+        for (const removeId of input.removeIds) {
+          await tx.execute(sql`
+            DELETE FROM boq_item
+            WHERE ahsp_item_id = ${removeId}
+              AND project_id IN (
+                SELECT project_id FROM boq_item WHERE ahsp_item_id = ${input.keepId}
+              )
+          `);
+          await tx.execute(sql`
+            UPDATE boq_item SET ahsp_item_id = ${input.keepId}
+            WHERE ahsp_item_id = ${removeId}
+          `);
+        }
+
+        // Delete removed ahsp_item rows; CASCADE cleans up children.
+        await tx.delete(ahspItem)
+          .where(and(
+            inArray(ahspItem.id, input.removeIds),
+            eq(ahspItem.organizationId, orgId),
+          ));
+        merged = input.removeIds.length;
+      });
+
+      const summary = `merged ${merged} kode(s): ${removedKodes.join(', ')}`
+        + (input.reason ? ` — ${input.reason}` : '');
+      await snapshotAhsp(ctx.db, input.keepId, ctx.session.user.id, summary);
+
+      return { merged, projectsAffected };
     }),
 });

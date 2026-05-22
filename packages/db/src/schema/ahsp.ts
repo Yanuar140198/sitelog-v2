@@ -13,7 +13,7 @@
  *
  * Per-project overrides → boq.resourceOverride table (in boq.ts).
  */
-import { pgTable, text, varchar, numeric, integer, uuid, timestamp, pgEnum, index, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, numeric, integer, uuid, timestamp, pgEnum, index, jsonb, primaryKey } from 'drizzle-orm/pg-core';
 import { organization, user } from './tenancy';
 
 export const resourceCategory = pgEnum('resource_category', ['tenaga', 'bahan', 'peralatan']);
@@ -31,11 +31,13 @@ export const ahspItem = pgTable('ahsp_item', {
   satuan: varchar('satuan', { length: 16 }).notNull(),    // unit: M3, M2, m, Jam, etc
   ohpPct: numeric('ohp_pct', { precision: 5, scale: 2 }).notNull().default('0'),  // Overhead+Profit %
   metadata: text('metadata'),                             // JSON for extra fields
+  archivedAt: timestamp('archived_at'),                   // soft-archive (null = active)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, t => [
   index('ahsp_item_org_kode_idx').on(t.organizationId, t.kode),
   index('ahsp_item_section_idx').on(t.section),
+  index('ahsp_item_archived_idx').on(t.archivedAt),
 ]);
 
 export const ahspInput = pgTable('ahsp_input', {
@@ -93,7 +95,21 @@ export const ahspVersion = pgTable('ahsp_version', {
   index('ahsp_version_item_idx').on(t.ahspItemId, t.versionNumber),
 ]);
 
+/**
+ * Per-user pinned/favorite AHSP items. Pinned items sort to the top of the catalog list.
+ * Composite PK (userId, ahspItemId) ensures a single pin per user/item pair.
+ */
+export const ahspPin = pgTable('ahsp_pin', {
+  userId: uuid('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  ahspItemId: uuid('ahsp_item_id').notNull().references(() => ahspItem.id, { onDelete: 'cascade' }),
+  pinnedAt: timestamp('pinned_at').notNull().defaultNow(),
+}, t => [
+  primaryKey({ columns: [t.userId, t.ahspItemId] }),
+  index('ahsp_pin_user_idx').on(t.userId),
+]);
+
 export type AhspItem = typeof ahspItem.$inferSelect;
 export type AhspResource = typeof ahspResource.$inferSelect;
 export type AhspVersion = typeof ahspVersion.$inferSelect;
+export type AhspPin = typeof ahspPin.$inferSelect;
 export type ResourceCategory = typeof resourceCategory.enumValues[number];
