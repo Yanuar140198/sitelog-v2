@@ -9,7 +9,7 @@
  *
  * Versioning: boqVersion captures snapshot for revision history + estimator comparison.
  */
-import { pgTable, text, varchar, numeric, uuid, timestamp, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, numeric, uuid, timestamp, integer, date, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { project } from './project';
 import { ahspItem } from './ahsp';
 import { user } from './tenancy';
@@ -23,12 +23,33 @@ export const boqItem = pgTable('boq_item', {
   // Optional manual unit rate override (Rp). NULL = use computed AHSP rate.
   unitRateOverride: numeric('unit_rate_override', { precision: 18, scale: 2 }),
   note: text('note'),
+  // Schedule fields (Primavera-style)
+  plannedStart: date('planned_start'),
+  plannedFinish: date('planned_finish'),
+  actualStart: date('actual_start'),
+  actualFinish: date('actual_finish'),
+  baselineStart: date('baseline_start'),
+  baselineFinish: date('baseline_finish'),
+  sortOrder: integer('sort_order').notNull().default(0),
   createdById: uuid('created_by_id').references(() => user.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, t => [
   uniqueIndex('boq_item_unique').on(t.projectId, t.ahspItemId),
   index('boq_item_project_idx').on(t.projectId),
+]);
+
+export const scheduleBaseline = pgTable('schedule_baseline', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').notNull().references(() => project.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 120 }).notNull(),
+  setById: uuid('set_by').references(() => user.id),
+  setAt: timestamp('set_at').notNull().defaultNow(),
+  notes: text('notes'),
+  snapshot: jsonb('snapshot').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, t => [
+  index('schedule_baseline_project_idx').on(t.projectId, t.setAt),
 ]);
 
 export const boqResourceOverride = pgTable('boq_resource_override', {
@@ -79,3 +100,4 @@ export type BoqItem = typeof boqItem.$inferSelect;
 export type BoqResourceOverride = typeof boqResourceOverride.$inferSelect;
 export type BoqVersion = typeof boqVersion.$inferSelect;
 export type BoqTemplate = typeof boqTemplate.$inferSelect;
+export type ScheduleBaseline = typeof scheduleBaseline.$inferSelect;

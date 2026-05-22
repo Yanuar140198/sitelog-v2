@@ -30,6 +30,7 @@ import { gdprRouter } from './gdpr.js';
 import { announcementRouter } from './announcement.js';
 import { sessionRouter } from './session.js';
 import { featureFlagRouter } from './feature-flag.js';
+import { scheduleRouter } from './schedule.js';
 
 export const appRouter = router({
   org: orgRouter,
@@ -63,6 +64,7 @@ export const appRouter = router({
   announcement: announcementRouter,
   session: sessionRouter,
   featureFlag: featureFlagRouter,
+  schedule: scheduleRouter,
 });
 
 export type AppRouter = typeof appRouter;

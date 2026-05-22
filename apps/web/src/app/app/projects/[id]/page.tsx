@@ -4,7 +4,8 @@ import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, X, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck } from 'lucide-react';
+import { Search, X, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
 import { AhspDetailDrawer } from '@/components/boq/ahsp-detail-drawer';
 import { BoqVersionPanel } from '@/components/boq/boq-version-panel';
 import { ProjectFleetPanel } from '@/components/fleet/project-fleet-panel';
@@ -112,6 +113,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
             <h2 className="font-display text-lg font-bold">{project.data?.name}</h2>
           </div>
           <div className="flex gap-1">
+            <Link href={`/app/projects/${id}/schedule`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="Schedule (S-curve + Gantt + Baseline)">
+              <BarChart3 size={14} />
+            </Link>
             {useFeatureFlag('ai-suggest') && (
               <button onClick={() => setShowAi(true)} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)]" title="AI Suggestions">
                 <Sparkles size={14} />

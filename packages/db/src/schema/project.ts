@@ -46,6 +46,9 @@ export const project = pgTable('project', {
   // Currency (default to org currency)
   currency: varchar('currency', { length: 3 }),         // null = inherit from org
   fxRateToOrg: numeric('fx_rate_to_org', { precision: 14, scale: 6 }),  // multiply by to convert project→org currency
+  // Schedule (Primavera-style)
+  dataDate: date('data_date'),  // cut-off for S-curve actual vs planned
+  baselineSetAt: timestamp('baseline_set_at'),
   // Soft delete
   deletedAt: timestamp('deleted_at'),
   createdById: uuid('created_by_id').references(() => user.id),
