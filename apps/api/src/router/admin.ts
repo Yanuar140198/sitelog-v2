@@ -72,6 +72,26 @@ export const adminRouter = router({
     return { org, subscription: sub ?? null, members, projects };
   }),
 
+  /** Recent webhook deliveries across all orgs — ops debugging. */
+  recentWebhookDeliveries: superProcedure
+    .input(z.object({ limit: z.number().min(1).max(500).default(100) }))
+    .query(async ({ ctx, input }) => {
+      const { webhookDelivery, webhookEndpoint } = await import('@sitelog/db');
+      return ctx.db.select({
+        id: webhookDelivery.id,
+        event: webhookDelivery.event,
+        responseStatus: webhookDelivery.responseStatus,
+        attempts: webhookDelivery.attempts,
+        createdAt: webhookDelivery.createdAt,
+        deliveredAt: webhookDelivery.deliveredAt,
+        endpointUrl: webhookEndpoint.url,
+        organizationId: webhookEndpoint.organizationId,
+      }).from(webhookDelivery)
+        .innerJoin(webhookEndpoint, eq(webhookEndpoint.id, webhookDelivery.endpointId))
+        .orderBy(desc(webhookDelivery.createdAt))
+        .limit(input.limit);
+    }),
+
   setPlan: superProcedure.input(z.object({
     slug: z.string(), plan: z.enum(['trial', 'starter', 'pro', 'enterprise']),
   })).mutation(async ({ ctx, input }) => {
