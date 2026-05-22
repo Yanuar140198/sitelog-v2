@@ -1,7 +1,9 @@
 # Sitelog v2
 
 [![Status](https://img.shields.io/endpoint?url=https://api.sitelog.app/badge/status)](https://sitelog.app/status)
-[![Tests](https://img.shields.io/badge/tests-130-brightgreen)]()
+[![Projects](https://img.shields.io/endpoint?url=https://api.sitelog.app/badge/projects)](https://sitelog.app)
+[![Entries](https://img.shields.io/endpoint?url=https://api.sitelog.app/badge/entries)](https://sitelog.app)
+[![Tests](https://img.shields.io/badge/tests-136-brightgreen)]()
 [![License](https://img.shields.io/badge/license-Proprietary-blue)](./LICENSE)
 
 Enterprise construction SaaS for BOQ estimation, fleet planning, daily reporting, SPI/CPI tracking. AHSP-based (Bina Marga) unit rate engine. Multi-tenant, real-time, mobile-first.
