@@ -10,3 +10,4 @@ export * from './notification';
 export * from './integrations';
 export * from './auth-bridge';
 export * from './announcements';
+export * from './feature-flags';
