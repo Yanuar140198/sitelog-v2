@@ -4,7 +4,7 @@ import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Plus, Trash2, History } from 'lucide-react';
 
 const EVENTS = ['*', 'project.created', 'project.updated', 'boq.changed', 'entry.submitted', 'fleet.assigned', 'invite.created'] as const;
 
@@ -22,6 +22,11 @@ export default function WebhooksPage() {
   const [desc, setDesc] = useState('');
   const [events, setEvents] = useState<string[]>(['*']);
   const [newSecret, setNewSecret] = useState<string | null>(null);
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
+  const deliveries = trpc.webhooks.deliveries.useQuery(
+    { endpointId: historyFor!, limit: 20 },
+    { enabled: !!historyFor, retry: false },
+  );
   function reset() { setUrl(''); setDesc(''); setEvents(['*']); setShow(false); }
 
   return (
@@ -67,6 +72,7 @@ export default function WebhooksPage() {
                 {w.lastFiredAt ? `${new Date(w.lastFiredAt).toLocaleString('id-ID')} · ${w.lastStatus ?? '—'}` : 'Never'}
               </td>
               <td className="px-3 py-2 text-center">
+                <button onClick={() => setHistoryFor(w.id)} className="p-1 mr-1 text-neutral-700 hover:bg-neutral-100" aria-label="History"><History size={14} /></button>
                 <button onClick={() => confirm('Delete?') && del.mutate({ id: w.id })} className="p-1 text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>
               </td>
             </tr>
@@ -76,6 +82,44 @@ export default function WebhooksPage() {
           )}
         </tbody>
       </table>
+
+      {historyFor && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+          onClick={e => { if (e.target === e.currentTarget) setHistoryFor(null); }}>
+          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-3xl w-full shadow-[8px_8px_0_var(--color-brand)]">
+            <h2 className="font-display text-2xl font-bold mb-1">Delivery History</h2>
+            <p className="font-mono text-xs text-neutral-500 mb-4">Last 20 attempts. 2xx = delivered, anything else = retry queued.</p>
+            <table className="w-full font-mono text-xs">
+              <thead><tr className="text-neutral-500 border-b border-neutral-200">
+                <th className="text-left py-1">TIME</th>
+                <th className="text-left">EVENT</th>
+                <th className="text-left">STATUS</th>
+                <th className="text-left">ATTEMPTS</th>
+                <th className="text-left">RESPONSE</th>
+              </tr></thead>
+              <tbody>
+                {deliveries.data?.map(d => (
+                  <tr key={d.id} className="border-b border-neutral-100">
+                    <td className="py-1">{new Date(d.createdAt).toLocaleString('id-ID')}</td>
+                    <td><strong>{d.event}</strong></td>
+                    <td className={d.responseStatus && d.responseStatus < 300 ? 'text-green-700' : 'text-red-700'}>
+                      {d.responseStatus ?? '—'}
+                    </td>
+                    <td>{d.attempts}</td>
+                    <td className="text-neutral-600 max-w-xs truncate" title={d.responseBody ?? ''}>{(d.responseBody ?? '').slice(0, 80)}</td>
+                  </tr>
+                ))}
+                {deliveries.data?.length === 0 && (
+                  <tr><td colSpan={5} className="text-center py-8 text-neutral-500">No deliveries yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+            <div className="mt-4 text-right">
+              <Button type="button" onClick={() => setHistoryFor(null)}>CLOSE</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {show && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
