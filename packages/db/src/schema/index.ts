@@ -16,4 +16,5 @@ export * from './hse';
 export * from './material';
 export * from './qc';
 export * from './variation-order';
+export * from './subcontractor';
 export * from './weather';
