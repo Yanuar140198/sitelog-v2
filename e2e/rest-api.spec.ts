@@ -130,6 +130,28 @@ test.describe('Idempotency (POST /entries)', () => {
   });
 });
 
+test.describe('CSV exports', () => {
+  test.skip(!API_KEY, 'SITELOG_API_KEY not set');
+
+  test('GET /exports/projects.csv returns CSV with download header', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/api/v1/exports/projects.csv', { headers: { authorization: `Bearer ${API_KEY}` } });
+    expect(res.ok()).toBeTruthy();
+    expect(res.headers()['content-type']).toMatch(/text\/csv/);
+    expect(res.headers()['content-disposition']).toMatch(/attachment.*\.csv/);
+    const body = await res.text();
+    expect(body.split('\n')[0]).toBe('id,code,name,status,client,location,startDate,finishDate,markupPct,contingencyPct,ppnPct,createdAt');
+  });
+
+  test('GET /exports/entries.csv returns CSV header', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/api/v1/exports/entries.csv', { headers: { authorization: `Bearer ${API_KEY}` } });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.text();
+    expect(body.split('\n')[0]).toContain('id,projectId,entryDate');
+  });
+});
+
 test.describe('OpenAPI spec', () => {
   test('GET /api/v1/openapi.json returns valid 3.1 spec without auth', async () => {
     const ctx = await request.newContext({ baseURL: API_BASE });
