@@ -53,4 +53,23 @@ describe('daily entry validation', () => {
     const r = validateEntry({ ...baseEntry, effectiveHours: -1, workforce: -1 });
     expect(r.errors.length).toBe(2);
   });
+
+  it('accepts 0 hours (rest day, no production)', () => {
+    expect(validateEntry({ ...baseEntry, effectiveHours: 0 }).ok).toBe(true);
+  });
+
+  it('accepts 0 workforce (entry for documentation only)', () => {
+    expect(validateEntry({ ...baseEntry, workforce: 0 }).ok).toBe(true);
+  });
+
+  it('rejects too many activities', () => {
+    const activities = Array.from({ length: 51 }, () => ({ quantity: 1, satuan: 'm3' }));
+    const r = validateEntry({ ...baseEntry, activities });
+    expect(r.ok).toBe(false);
+    expect(r.errors[0]).toMatch(/50 activities/);
+  });
+
+  it('accepts empty activities array (no production day)', () => {
+    expect(validateEntry({ ...baseEntry, activities: [] }).ok).toBe(true);
+  });
 });

@@ -50,4 +50,28 @@ describe('webhook signature (HMAC-SHA256)', () => {
     const h = signPayload(SECRET, BODY, old);
     expect(verifyWebhook(SECRET, BODY, h, { now: old + 600, toleranceSeconds: 900 })).toBe(true);
   });
+
+  it('verifyWebhook handles empty body', () => {
+    const now = 1700000000;
+    const h = signPayload(SECRET, '', now);
+    expect(verifyWebhook(SECRET, '', h, { now })).toBe(true);
+  });
+
+  it('verifyWebhook rejects header with mismatched hex length', () => {
+    expect(verifyWebhook(SECRET, BODY, 't=1700000000,v1=deadbeef', { now: 1700000000 })).toBe(false);
+  });
+
+  it('parseHeader strips whitespace', () => {
+    const p = parseHeader(' t=1700000000 , v1=abc123 ');
+    expect(p?.t).toBe(1700000000);
+    expect(p?.v1).toBe('abc123');
+  });
+
+  it('signPayload uses default now when timestamp omitted', () => {
+    const before = Math.floor(Date.now() / 1000);
+    const h = signPayload(SECRET, BODY);
+    const parsed = parseHeader(h);
+    expect(parsed?.t).toBeGreaterThanOrEqual(before);
+    expect(parsed?.t).toBeLessThanOrEqual(before + 2);
+  });
 });
