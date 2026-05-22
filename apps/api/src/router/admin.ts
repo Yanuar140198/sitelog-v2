@@ -111,8 +111,8 @@ export const adminRouter = router({
     for (const s of subRows) planCounts[s.plan] = (planCounts[s.plan] ?? 0) + 1;
     const recent: any = await ctx.db.execute(sql`
       SELECT
-        (SELECT COUNT(*)::int FROM daily_entry WHERE created_at > NOW() - INTERVAL '24 hours') AS entries_24h,
-        (SELECT COUNT(*)::int FROM daily_entry WHERE created_at > NOW() - INTERVAL '7 days')   AS entries_7d,
+        (SELECT COUNT(*)::int FROM daily_entry WHERE submitted_at > NOW() - INTERVAL '24 hours') AS entries_24h,
+        (SELECT COUNT(*)::int FROM daily_entry WHERE submitted_at > NOW() - INTERVAL '7 days')   AS entries_7d,
         (SELECT COUNT(*)::int FROM audit_log   WHERE created_at > NOW() - INTERVAL '24 hours') AS audit_24h,
         (SELECT COUNT(*)::int FROM "user"      WHERE created_at > NOW() - INTERVAL '7 days')   AS users_7d,
         (SELECT COUNT(*)::int FROM organization WHERE created_at > NOW() - INTERVAL '7 days')  AS orgs_7d,
