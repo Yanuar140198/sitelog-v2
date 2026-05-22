@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { and, eq, or, isNull, asc, max, inArray, sql } from 'drizzle-orm';
+import { and, eq, or, isNull, asc, desc, max, inArray, sql } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
-import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, resourceMaster } from '@sitelog/db';
+import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, resourceMaster, user } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
 
@@ -107,21 +107,22 @@ function parseCalculationSheet(ws: any): ParsedAhsp[] {
   for (let r = 1; r <= rowCount; r++) allRows.push(rowVals(ws.getRow(r), 9));
   const blockStarts: number[] = [];
   for (let i = 0; i < allRows.length; i++) {
-    if (T(allRows[i][7]).startsWith('Satuan:')) blockStarts.push(i);
+    if (T((allRows[i] ?? [])[7]).startsWith('Satuan:')) blockStarts.push(i);
   }
   const items: ParsedAhsp[] = [];
   const seen: Record<string, number> = {};
   for (let idx = 0; idx < blockStarts.length; idx++) {
-    const start = blockStarts[idx];
-    const end = idx + 1 < blockStarts.length ? blockStarts[idx + 1] : allRows.length;
-    const header = allRows[start];
+    const start = blockStarts[idx] ?? 0;
+    const end = idx + 1 < blockStarts.length ? (blockStarts[idx + 1] ?? allRows.length) : allRows.length;
+    const header = allRows[start] ?? [];
     const b = T(header[1]);
     const c = T(header[2]);
     const h = T(header[7]);
     const m = h.match(SATUAN_RE);
-    const satuan = m ? m[1].trim() : '';
+    const satuan = m ? (m[1] ?? '').trim() : '';
     let kode = colBToKode(b);
-    if (seen[kode]) { seen[kode]++; kode = `${kode}-v${seen[kode]}`; } else { seen[kode] = 1; }
+    const seenCount = seen[kode] ?? 0;
+    if (seenCount) { seen[kode] = seenCount + 1; kode = `${kode}-v${seenCount + 1}`; } else { seen[kode] = 1; }
     const { label, jenis } = deriveLabel(b, c);
     const item: ParsedAhsp = { kode, sourceKode: b, label, jenis, satuan, ohpPct: 0, inputs: [], koefisien: [], resources: [] };
 
@@ -132,7 +133,7 @@ function parseCalculationSheet(ws: any): ParsedAhsp[] {
     const ordR = { tenaga: 0, bahan: 0, peralatan: 0 };
 
     for (let r = start + 1; r < end; r++) {
-      const row = allRows[r];
+      const row = allRows[r] ?? [];
       const joined = row.filter(x => x !== null && x !== undefined).map(x => T(x)).join(' ');
       if (joined.includes('I. INPUT')) { section = 'input'; inResTable = false; continue; }
       if (joined.includes('II. PRODUKTIVITAS')) { section = 'koef'; inResTable = false; continue; }
@@ -961,7 +962,7 @@ export const ahspRouter = router({
               nama: r.nama, category: r.category, satuan: r.satuan,
               defaultHsd: String(r.hsd), notes: r.catatan || null,
               updatedAt: new Date(),
-            }).where(eq(resourceMaster.id, existing[0].id));
+            }).where(eq(resourceMaster.id, existing[0]!.id));
           } else {
             await tx.insert(resourceMaster).values({
               organizationId: targetOrgId,
@@ -981,7 +982,7 @@ export const ahspRouter = router({
           const existing = await tx.select({ id: ahspItem.id }).from(ahspItem).where(where!).limit(1);
           let ahspId: string;
           if (existing.length) {
-            ahspId = existing[0].id;
+            ahspId = existing[0]!.id;
             await tx.update(ahspItem).set({
               label: it.label, sourceKode: it.sourceKode,
               jenis: it.jenis, satuan: it.satuan,
@@ -992,8 +993,8 @@ export const ahspRouter = router({
               organizationId: targetOrgId,
               kode: it.kode, label: it.label, sourceKode: it.sourceKode,
               jenis: it.jenis, satuan: it.satuan, ohpPct: String(it.ohpPct),
-            }).returning({ id: ahspItem.id });
-            ahspId = row.id;
+            }).returning();
+            ahspId = row!.id;
           }
 
           await tx.delete(ahspInput).where(eq(ahspInput.ahspItemId, ahspId));
@@ -1029,5 +1030,343 @@ export const ahspRouter = router({
       });
 
       return { dryRun: false, resourcesImported, itemsImported, errors };
+    }),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Versioned editing — every mutation snapshots to ahsp_version log.
+  // All require org-owned target (assertEditable). Roles: owner/admin/estimator.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Update item header (jenis/deskripsi/satuan/ohpPct). Snapshots after change.
+   */
+  updateMeta: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      id: z.string().uuid(),
+      jenis: z.string().min(1).optional(),
+      deskripsi: z.string().optional(),
+      satuan: z.string().min(1).optional(),
+      ohpPct: z.number().min(0).max(100).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertEditable(ctx.db, input.id, ctx.session.organizationId);
+      const sets: any = { updatedAt: new Date() };
+      if (input.jenis !== undefined) sets.jenis = input.jenis;
+      if (input.deskripsi !== undefined) sets.deskripsi = input.deskripsi;
+      if (input.satuan !== undefined) sets.satuan = input.satuan;
+      if (input.ohpPct !== undefined) sets.ohpPct = String(input.ohpPct);
+      const [row] = await ctx.db.update(ahspItem).set(sets)
+        .where(and(eq(ahspItem.id, input.id), eq(ahspItem.organizationId, ctx.session.organizationId)))
+        .returning();
+      await snapshotAhsp(ctx.db, input.id, ctx.session.user.id, `update meta`);
+      return row;
+    }),
+
+  addResource: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      ahspItemId: z.string().uuid(),
+      category: z.enum(['tenaga', 'bahan', 'peralatan']),
+      kode: z.string().min(1),
+      uraian: z.string().min(1),
+      koefisien: z.number(),
+      hsd: z.number().optional(),
+      satuan: z.string().optional(),
+      resourceMasterId: z.string().uuid().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertEditable(ctx.db, input.ahspItemId, ctx.session.organizationId);
+      // Default HSD/satuan from master if linked and caller didn't supply them.
+      let hsd = input.hsd;
+      let satuan = input.satuan;
+      if (input.resourceMasterId && (hsd === undefined || satuan === undefined)) {
+        const [m] = await ctx.db.select().from(resourceMaster)
+          .where(eq(resourceMaster.id, input.resourceMasterId)).limit(1);
+        if (m) {
+          if (hsd === undefined) hsd = N(m.defaultHsd);
+          if (satuan === undefined) satuan = m.satuan;
+        }
+      }
+      const [maxOrd] = await ctx.db.select({ m: max(ahspResource.ordinal) }).from(ahspResource)
+        .where(and(eq(ahspResource.ahspItemId, input.ahspItemId), eq(ahspResource.category, input.category)));
+      const ordinal = (maxOrd?.m ?? -1) + 1;
+      const [row] = await ctx.db.insert(ahspResource).values({
+        ahspItemId: input.ahspItemId,
+        category: input.category,
+        ordinal,
+        resourceCode: input.kode,
+        uraian: input.uraian,
+        koefisien: String(input.koefisien),
+        satuan,
+        hsd: String(hsd ?? 0),
+      }).returning();
+      await snapshotAhsp(ctx.db, input.ahspItemId, ctx.session.user.id, `add resource ${input.category}/${input.kode}`);
+      return row;
+    }),
+
+  updateResource: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      id: z.string().uuid(),
+      koefisien: z.number().optional(),
+      hsd: z.number().optional(),
+      uraian: z.string().optional(),
+      satuan: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db.select().from(ahspResource).where(eq(ahspResource.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, existing.ahspItemId, ctx.session.organizationId);
+      const sets: any = {};
+      if (input.koefisien !== undefined) sets.koefisien = String(input.koefisien);
+      if (input.hsd !== undefined) sets.hsd = String(input.hsd);
+      if (input.uraian !== undefined) sets.uraian = input.uraian;
+      if (input.satuan !== undefined) sets.satuan = input.satuan;
+      const [row] = await ctx.db.update(ahspResource).set(sets).where(eq(ahspResource.id, input.id)).returning();
+      await snapshotAhsp(ctx.db, existing.ahspItemId, ctx.session.user.id, `update resource ${existing.resourceCode}`);
+      return row;
+    }),
+
+  deleteResource: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db.select().from(ahspResource).where(eq(ahspResource.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, existing.ahspItemId, ctx.session.organizationId);
+      await ctx.db.delete(ahspResource).where(eq(ahspResource.id, input.id));
+      await snapshotAhsp(ctx.db, existing.ahspItemId, ctx.session.user.id, `delete resource ${existing.resourceCode}`);
+      return { ok: true };
+    }),
+
+  addInput: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      ahspItemId: z.string().uuid(),
+      kode: z.string().min(1),
+      variable: z.string().optional(),
+      uraian: z.string().min(1),
+      nilai: z.number().optional(),
+      satuan: z.string().optional(),
+      sumber: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertEditable(ctx.db, input.ahspItemId, ctx.session.organizationId);
+      const [maxOrd] = await ctx.db.select({ m: max(ahspInput.ordinal) }).from(ahspInput)
+        .where(eq(ahspInput.ahspItemId, input.ahspItemId));
+      const ordinal = (maxOrd?.m ?? -1) + 1;
+      const [row] = await ctx.db.insert(ahspInput).values({
+        ahspItemId: input.ahspItemId,
+        ordinal,
+        kode: input.kode,
+        variable: input.variable,
+        uraian: input.uraian,
+        nilai: input.nilai !== undefined ? String(input.nilai) : null,
+        satuan: input.satuan,
+        sumber: input.sumber,
+      }).returning();
+      await snapshotAhsp(ctx.db, input.ahspItemId, ctx.session.user.id, `add input ${input.kode}`);
+      return row;
+    }),
+
+  updateInput: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      id: z.string().uuid(),
+      kode: z.string().optional(),
+      variable: z.string().optional(),
+      uraian: z.string().optional(),
+      nilai: z.number().nullable().optional(),
+      satuan: z.string().optional(),
+      sumber: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db.select().from(ahspInput).where(eq(ahspInput.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, existing.ahspItemId, ctx.session.organizationId);
+      const sets: any = {};
+      if (input.kode !== undefined) sets.kode = input.kode;
+      if (input.variable !== undefined) sets.variable = input.variable;
+      if (input.uraian !== undefined) sets.uraian = input.uraian;
+      if (input.nilai !== undefined) sets.nilai = input.nilai === null ? null : String(input.nilai);
+      if (input.satuan !== undefined) sets.satuan = input.satuan;
+      if (input.sumber !== undefined) sets.sumber = input.sumber;
+      const [row] = await ctx.db.update(ahspInput).set(sets).where(eq(ahspInput.id, input.id)).returning();
+      await snapshotAhsp(ctx.db, existing.ahspItemId, ctx.session.user.id, `update input ${existing.kode}`);
+      return row;
+    }),
+
+  deleteInput: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db.select().from(ahspInput).where(eq(ahspInput.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, existing.ahspItemId, ctx.session.organizationId);
+      await ctx.db.delete(ahspInput).where(eq(ahspInput.id, input.id));
+      await snapshotAhsp(ctx.db, existing.ahspItemId, ctx.session.user.id, `delete input ${existing.kode}`);
+      return { ok: true };
+    }),
+
+  addKoefisien: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      ahspItemId: z.string().uuid(),
+      kode: z.string().min(1),
+      variable: z.string().optional(),
+      uraian: z.string().optional(),
+      nilai: z.number().optional(),
+      satuan: z.string().optional(),
+      formula: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertEditable(ctx.db, input.ahspItemId, ctx.session.organizationId);
+      const [maxOrd] = await ctx.db.select({ m: max(ahspKoefisien.ordinal) }).from(ahspKoefisien)
+        .where(eq(ahspKoefisien.ahspItemId, input.ahspItemId));
+      const ordinal = (maxOrd?.m ?? -1) + 1;
+      const [row] = await ctx.db.insert(ahspKoefisien).values({
+        ahspItemId: input.ahspItemId,
+        ordinal,
+        kode: input.kode,
+        variable: input.variable,
+        uraian: input.uraian,
+        nilai: input.nilai !== undefined ? String(input.nilai) : null,
+        satuan: input.satuan,
+        formula: input.formula,
+      }).returning();
+      await snapshotAhsp(ctx.db, input.ahspItemId, ctx.session.user.id, `add koefisien ${input.kode}`);
+      return row;
+    }),
+
+  updateKoefisien: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({
+      id: z.string().uuid(),
+      kode: z.string().optional(),
+      variable: z.string().optional(),
+      uraian: z.string().optional(),
+      nilai: z.number().nullable().optional(),
+      satuan: z.string().optional(),
+      formula: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db.select().from(ahspKoefisien).where(eq(ahspKoefisien.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, existing.ahspItemId, ctx.session.organizationId);
+      const sets: any = {};
+      if (input.kode !== undefined) sets.kode = input.kode;
+      if (input.variable !== undefined) sets.variable = input.variable;
+      if (input.uraian !== undefined) sets.uraian = input.uraian;
+      if (input.nilai !== undefined) sets.nilai = input.nilai === null ? null : String(input.nilai);
+      if (input.satuan !== undefined) sets.satuan = input.satuan;
+      if (input.formula !== undefined) sets.formula = input.formula;
+      const [row] = await ctx.db.update(ahspKoefisien).set(sets).where(eq(ahspKoefisien.id, input.id)).returning();
+      await snapshotAhsp(ctx.db, existing.ahspItemId, ctx.session.user.id, `update koefisien ${existing.kode}`);
+      return row;
+    }),
+
+  deleteKoefisien: requireRole('owner', 'admin', 'estimator')
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db.select().from(ahspKoefisien).where(eq(ahspKoefisien.id, input.id)).limit(1);
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, existing.ahspItemId, ctx.session.organizationId);
+      await ctx.db.delete(ahspKoefisien).where(eq(ahspKoefisien.id, input.id));
+      await snapshotAhsp(ctx.db, existing.ahspItemId, ctx.session.user.id, `delete koefisien ${existing.kode}`);
+      return { ok: true };
+    }),
+
+  /**
+   * Version history (newest first) joined with editor name/email for display.
+   */
+  versions: orgProcedure
+    .input(z.object({ ahspItemId: z.string().uuid(), limit: z.number().int().min(1).max(200).default(50) }))
+    .query(async ({ ctx, input }) => {
+      const [item] = await ctx.db.select().from(ahspItem)
+        .where(and(
+          eq(ahspItem.id, input.ahspItemId),
+          or(isNull(ahspItem.organizationId), eq(ahspItem.organizationId, ctx.session.organizationId)),
+        ))
+        .limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+      const rows = await ctx.db.select({
+        id: ahspVersion.id,
+        versionNumber: ahspVersion.versionNumber,
+        changeSummary: ahspVersion.changeSummary,
+        createdAt: ahspVersion.createdAt,
+        changedById: ahspVersion.changedById,
+        changedByName: user.name,
+        changedByEmail: user.email,
+      })
+        .from(ahspVersion)
+        .leftJoin(user, eq(user.id, ahspVersion.changedById))
+        .where(eq(ahspVersion.ahspItemId, input.ahspItemId))
+        .orderBy(desc(ahspVersion.versionNumber))
+        .limit(input.limit);
+      return rows;
+    }),
+
+  /**
+   * Restore a past version: snapshot the BEFORE-state first (reversible), then wipe + replay
+   * snapshot contents back into ahsp_input / ahsp_koefisien / ahsp_resource and overwrite item
+   * header fields (preserving id + organizationId). Owner/admin only.
+   */
+  restoreVersion: requireRole('owner', 'admin')
+    .input(z.object({ versionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [ver] = await ctx.db.select().from(ahspVersion).where(eq(ahspVersion.id, input.versionId)).limit(1);
+      if (!ver) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, ver.ahspItemId, ctx.session.organizationId);
+
+      await snapshotAhsp(ctx.db, ver.ahspItemId, ctx.session.user.id, `pre-restore (→ v${ver.versionNumber})`);
+
+      const snap = ver.snapshot as any;
+      if (snap.item) {
+        const it = snap.item;
+        await ctx.db.update(ahspItem).set({
+          kode: it.kode,
+          label: it.label ?? null,
+          section: it.section ?? null,
+          jenis: it.jenis,
+          deskripsi: it.deskripsi ?? null,
+          satuan: it.satuan,
+          ohpPct: String(it.ohpPct ?? 0),
+          metadata: it.metadata ?? null,
+          updatedAt: new Date(),
+        }).where(eq(ahspItem.id, ver.ahspItemId));
+      }
+      await ctx.db.delete(ahspInput).where(eq(ahspInput.ahspItemId, ver.ahspItemId));
+      await ctx.db.delete(ahspKoefisien).where(eq(ahspKoefisien.ahspItemId, ver.ahspItemId));
+      await ctx.db.delete(ahspResource).where(eq(ahspResource.ahspItemId, ver.ahspItemId));
+      if (snap.inputs?.length) {
+        await ctx.db.insert(ahspInput).values(snap.inputs.map((i: any) => ({
+          ahspItemId: ver.ahspItemId,
+          ordinal: i.ordinal,
+          kode: i.kode,
+          variable: i.variable ?? null,
+          uraian: i.uraian,
+          nilai: i.nilai !== null && i.nilai !== undefined ? String(i.nilai) : null,
+          satuan: i.satuan ?? null,
+          sumber: i.sumber ?? null,
+        })));
+      }
+      if (snap.koefisien?.length) {
+        await ctx.db.insert(ahspKoefisien).values(snap.koefisien.map((k: any) => ({
+          ahspItemId: ver.ahspItemId,
+          ordinal: k.ordinal,
+          kode: k.kode,
+          variable: k.variable ?? null,
+          uraian: k.uraian ?? null,
+          nilai: k.nilai !== null && k.nilai !== undefined ? String(k.nilai) : null,
+          satuan: k.satuan ?? null,
+          formula: k.formula ?? null,
+        })));
+      }
+      if (snap.resources?.length) {
+        await ctx.db.insert(ahspResource).values(snap.resources.map((r: any) => ({
+          ahspItemId: ver.ahspItemId,
+          category: r.category,
+          ordinal: r.ordinal,
+          resourceCode: r.resourceCode,
+          uraian: r.uraian,
+          koefisien: String(r.koefisien),
+          satuan: r.satuan ?? null,
+          hsd: String(r.hsd),
+        })));
+      }
+      await snapshotAhsp(ctx.db, ver.ahspItemId, ctx.session.user.id, `restored from v${ver.versionNumber}`);
+      return { ok: true, restoredFrom: ver.versionNumber };
     }),
 });

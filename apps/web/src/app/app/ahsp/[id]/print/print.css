@@ -1,0 +1,177 @@
+/* Bina Marga AHSP print sheet — A4 portrait, monochrome. */
+
+.ahsp-print {
+  font-family: 'Times New Roman', Georgia, serif;
+  color: #000;
+  background: #fff;
+  font-size: 11pt;
+  line-height: 1.35;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 16mm 14mm;
+}
+
+.ahsp-print h1,
+.ahsp-print h2,
+.ahsp-print h3 {
+  margin: 0 0 6pt 0;
+  font-family: 'Times New Roman', Georgia, serif;
+  font-weight: bold;
+}
+
+.ahsp-print .cover {
+  text-align: center;
+  border: 2pt solid #000;
+  padding: 10mm 6mm;
+  margin-bottom: 8mm;
+}
+
+.ahsp-print .cover .org {
+  font-size: 10pt;
+  letter-spacing: 1pt;
+  text-transform: uppercase;
+}
+
+.ahsp-print .cover .title {
+  font-size: 16pt;
+  margin: 4pt 0 2pt;
+}
+
+.ahsp-print .cover .subtitle {
+  font-size: 11pt;
+}
+
+.ahsp-print .meta {
+  display: grid;
+  grid-template-columns: 80mm 1fr;
+  gap: 2pt 6pt;
+  margin: 6mm 0;
+  font-size: 10pt;
+}
+
+.ahsp-print .meta dt {
+  font-weight: bold;
+}
+
+.ahsp-print section {
+  margin-top: 6mm;
+  page-break-inside: avoid;
+}
+
+.ahsp-print section > h2 {
+  font-size: 12pt;
+  border-bottom: 1pt solid #000;
+  padding-bottom: 2pt;
+  margin-bottom: 3pt;
+}
+
+.ahsp-print table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10pt;
+}
+
+.ahsp-print th,
+.ahsp-print td {
+  border: 0.5pt solid #000;
+  padding: 3pt 4pt;
+  vertical-align: top;
+}
+
+.ahsp-print th {
+  background: #f0f0f0;
+  font-weight: bold;
+  text-align: center;
+}
+
+.ahsp-print td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ahsp-print td.code {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.ahsp-print .cat-header td {
+  background: #e5e5e5;
+  font-weight: bold;
+}
+
+.ahsp-print .subtotal td {
+  font-weight: bold;
+  background: #f7f7f7;
+}
+
+.ahsp-print .grand-total td {
+  font-weight: bold;
+  background: #d9d9d9;
+  border-top: 1.5pt solid #000;
+}
+
+.ahsp-print .print-toolbar {
+  margin-bottom: 6mm;
+  padding: 6pt 10pt;
+  background: #fff8e1;
+  border: 1pt dashed #888;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 10pt;
+  display: flex;
+  gap: 12pt;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ahsp-print .print-toolbar button {
+  font-size: 10pt;
+  padding: 4pt 12pt;
+  border: 1pt solid #000;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ahsp-print .print-toolbar a {
+  color: #0050b3;
+  text-decoration: underline;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  /* Hide app chrome and any non-print elements while keeping the sheet visible. */
+  body > *:not(.ahsp-print-root),
+  nav,
+  header.app-header,
+  aside,
+  .app-shell-sidebar,
+  .app-shell-topbar {
+    display: none !important;
+  }
+
+  .ahsp-print {
+    padding: 0;
+    max-width: none;
+  }
+
+  .ahsp-print .print-toolbar {
+    display: none !important;
+  }
+
+  .ahsp-print section {
+    page-break-inside: avoid;
+  }
+
+  .ahsp-print table {
+    page-break-inside: auto;
+  }
+
+  .ahsp-print tr {
+    page-break-inside: avoid;
+  }
+}

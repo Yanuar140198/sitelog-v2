@@ -13,8 +13,8 @@
  *
  * Per-project overrides → boq.resourceOverride table (in boq.ts).
  */
-import { pgTable, text, varchar, numeric, integer, uuid, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
-import { organization } from './tenancy';
+import { pgTable, text, varchar, numeric, integer, uuid, timestamp, pgEnum, index, jsonb } from 'drizzle-orm/pg-core';
+import { organization, user } from './tenancy';
 
 export const resourceCategory = pgEnum('resource_category', ['tenaga', 'bahan', 'peralatan']);
 
@@ -77,6 +77,23 @@ export const ahspResource = pgTable('ahsp_resource', {
   index('ahsp_resource_code_idx').on(t.resourceCode),
 ]);
 
+/**
+ * Version log: every mutation (item meta, inputs, koefisien, resources) appends
+ * a JSONB snapshot here. Restore replays a snapshot back into live tables.
+ */
+export const ahspVersion = pgTable('ahsp_version', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ahspItemId: uuid('ahsp_item_id').notNull().references(() => ahspItem.id, { onDelete: 'cascade' }),
+  versionNumber: integer('version_number').notNull(),
+  snapshot: jsonb('snapshot').notNull(),  // { item, inputs, koefisien, resources, computedRate }
+  changedById: uuid('changed_by_id').references(() => user.id),
+  changeSummary: varchar('change_summary', { length: 200 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, t => [
+  index('ahsp_version_item_idx').on(t.ahspItemId, t.versionNumber),
+]);
+
 export type AhspItem = typeof ahspItem.$inferSelect;
 export type AhspResource = typeof ahspResource.$inferSelect;
+export type AhspVersion = typeof ahspVersion.$inferSelect;
 export type ResourceCategory = typeof resourceCategory.enumValues[number];
