@@ -287,4 +287,26 @@ rest.get('/me', async (c) => {
   });
 });
 
+// POST /api/v1/debug/echo — echoes request body + headers for integration sanity check
+rest.post('/debug/echo', async (c) => {
+  let body: unknown;
+  try { body = await c.req.json(); } catch { body = null; }
+  const headers: Record<string, string> = {};
+  c.req.raw.headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'authorization') return; // redact secret
+    headers[key] = value;
+  });
+  return c.json({
+    data: {
+      orgId: c.get('orgId' as any),
+      scope: c.get('scope'),
+      method: c.req.method,
+      path: c.req.path,
+      headers,
+      body,
+      receivedAt: new Date().toISOString(),
+    },
+  });
+});
+
 export { rest };
