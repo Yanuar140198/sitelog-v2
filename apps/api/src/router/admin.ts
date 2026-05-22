@@ -57,6 +57,17 @@ export const adminRouter = router({
     }));
   }),
 
+  /** Force-logout a user by killing all sessions. Ops kill switch. */
+  killUserSessions: superProcedure
+    .input(z.object({ userId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { session: sessionTable } = await import('@sitelog/db');
+      const r = await ctx.db.delete(sessionTable).where(eq(sessionTable.userId, input.userId)).returning();
+      const { log } = await import('../lib/logger.js');
+      log.warn('admin.killUserSessions', { actorId: ctx.session.user.id, targetUserId: input.userId, revoked: r.length });
+      return { ok: true, revoked: r.length };
+    }),
+
   /** Recent failed logins (last 24h/7d/30d) — security monitoring. */
   recentFailedLogins: superProcedure
     .input(z.object({ limit: z.number().min(1).max(500).default(100), since: z.enum(['24h', '7d', '30d']).default('24h') }))
