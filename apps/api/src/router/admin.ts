@@ -62,8 +62,8 @@ export const adminRouter = router({
     const { sql } = await import('drizzle-orm');
     const tablesQ: any = await ctx.db.execute(sql`
       SELECT
-        relname AS table_name,
-        n_live_tup AS rows,
+        C.relname AS table_name,
+        COALESCE(S.n_live_tup, 0) AS rows,
         pg_total_relation_size(C.oid) AS total_bytes,
         pg_relation_size(C.oid) AS table_bytes
       FROM pg_class C
