@@ -17,9 +17,16 @@ export default function SuperAdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Kpi label="ORGANIZATIONS" value={s?.orgs ?? 0} />
-        <Kpi label="USERS" value={s?.users ?? 0} />
+        <Kpi label="ORGANIZATIONS" value={s?.orgs ?? 0} sub={s?.recency?.orgs7d ? `+${s.recency.orgs7d} last 7d` : undefined} />
+        <Kpi label="USERS" value={s?.users ?? 0} sub={s?.recency?.users7d ? `+${s.recency.users7d} last 7d` : undefined} />
         <Kpi label="PROJECTS" value={s?.projects ?? 0} />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Kpi label="ENTRIES (24h)"     value={s?.recency?.entries24h ?? 0} />
+        <Kpi label="ENTRIES (7d)"       value={s?.recency?.entries7d ?? 0} />
+        <Kpi label="AUDIT (24h)"        value={s?.recency?.audit24h ?? 0} />
+        <Kpi label="WEBHOOKS ACTIVE"    value={s?.recency?.webhooksActive ?? 0} />
       </div>
 
       <div className="border-2 border-white/20 bg-black/50 p-6">
@@ -37,11 +44,12 @@ export default function SuperAdminDashboard() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: number }) {
+function Kpi({ label, value, sub }: { label: string; value: number; sub?: string }) {
   return (
     <div className="border-2 border-white/30 bg-black/50 p-6">
       <div className="font-mono text-[10px] tracking-[0.2em] text-[var(--color-brand)]">{label}</div>
-      <div className="font-display text-4xl font-bold mt-2">{value}</div>
+      <div className="font-display text-4xl font-bold mt-2">{value.toLocaleString()}</div>
+      {sub && <div className="font-mono text-[10px] text-white/50 mt-1">{sub}</div>}
     </div>
   );
 }
