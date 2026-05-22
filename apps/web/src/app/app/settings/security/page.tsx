@@ -1,9 +1,56 @@
 'use client';
 import { trpc } from '@sitelog/api-client/react';
 
+function ActiveSessions() {
+  const list = trpc.session.list.useQuery(undefined, { retry: false });
+  const utils = trpc.useUtils();
+  const revoke = trpc.session.revoke.useMutation({ onSuccess: () => utils.session.list.invalidate() });
+  const revokeOthers = trpc.session.revokeOthers.useMutation({ onSuccess: () => utils.session.list.invalidate() });
+
+  return (
+    <section className="border-2 border-[var(--color-ink)]">
+      <h2 className="font-mono text-xs tracking-wider bg-[var(--color-ink)] text-white px-4 py-3 flex justify-between">
+        <span>ACTIVE SESSIONS</span>
+        {(list.data?.length ?? 0) > 1 && (
+          <button
+            onClick={() => revokeOthers.mutate()}
+            className="text-[10px] underline hover:text-[var(--color-brand)]"
+          >
+            REVOKE ALL OTHERS
+          </button>
+        )}
+      </h2>
+      <div className="p-4 space-y-2 font-mono text-xs">
+        {list.isLoading && <p className="text-neutral-500">Loading…</p>}
+        {list.error && <p className="text-red-600">{list.error.message}</p>}
+        {list.data?.map(s => (
+          <div key={s.id} className="flex justify-between items-center py-2 border-b border-neutral-200 last:border-0">
+            <div>
+              <div>
+                <strong>{(s.userAgent ?? 'Unknown agent').slice(0, 60)}</strong>
+                {s.current && <span className="ml-2 bg-green-600 text-white px-2 py-0.5 text-[10px] font-bold">CURRENT</span>}
+              </div>
+              <div className="text-neutral-500 text-[10px] mt-1">
+                {s.ipAddress ?? '—'} · created {new Date(s.createdAt).toLocaleString()} · expires {new Date(s.expiresAt).toLocaleDateString()}
+              </div>
+            </div>
+            {!s.current && (
+              <button
+                onClick={() => revoke.mutate({ id: s.id })}
+                className="text-red-600 hover:text-red-800 text-xs px-3 py-1 border border-red-300"
+              >
+                REVOKE
+              </button>
+            )}
+          </div>
+        ))}
+        {list.data?.length === 0 && <p className="text-neutral-500">No active sessions.</p>}
+      </div>
+    </section>
+  );
+}
+
 export default function SecurityPage() {
-  // Current user info via better-auth session — for now show settings hint
-  // Active sessions list via auth.api would go here when wired
   const me = trpc.org.current.useQuery(undefined, { retry: false });
 
   return (
@@ -23,23 +70,10 @@ export default function SecurityPage() {
           >
             ENABLE 2FA →
           </a>
-          <p className="font-mono text-[10px] text-neutral-500 mt-2">
-            Endpoint: <code>POST /api/auth/two-factor/enable</code> (Better Auth)
-          </p>
         </div>
       </section>
 
-      <section className="border-2 border-[var(--color-ink)]">
-        <h2 className="font-mono text-xs tracking-wider bg-[var(--color-ink)] text-white px-4 py-3">
-          ACTIVE SESSIONS
-        </h2>
-        <div className="p-4 space-y-3">
-          <p className="font-mono text-xs text-neutral-700 leading-relaxed">
-            View + revoke active sessions across devices. Coming soon — wire via
-            <code className="bg-neutral-200 px-1 mx-1">auth.api.listSessions()</code>.
-          </p>
-        </div>
-      </section>
+      <ActiveSessions />
 
       <section className="border-2 border-[var(--color-ink)]">
         <h2 className="font-mono text-xs tracking-wider bg-[var(--color-ink)] text-white px-4 py-3">
