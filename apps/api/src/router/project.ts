@@ -73,6 +73,8 @@ export const projectRouter = router({
       if (row) {
         await audit(ctx, { action: 'project.create', resource: 'project', resourceId: row.id, after: { code: row.code, name: row.name } });
         dispatchEvent(ctx.session.organizationId, 'project.created', { id: row.id, code: row.code, name: row.name }).catch(() => {});
+        const { log } = await import('../lib/logger.js');
+        log.info('project.created', { orgId: ctx.session.organizationId, userId: ctx.session.user.id, projectId: row.id, code: row.code });
       }
       return row;
     }),
