@@ -59,6 +59,43 @@ export default function OrgDetail() {
           <tbody>{projects.map((p: any) => <tr key={p.id} className="border-t border-white/10"><td className="py-1 text-[var(--color-brand)]">{p.code}</td><td>{p.name}</td><td className="uppercase">{p.status}</td><td className="text-white/60">{new Date(p.createdAt).toLocaleDateString()}</td></tr>)}</tbody>
         </table>
       </section>
+
+      <FlagOverridePanel orgId={org.id} />
     </div>
+  );
+}
+
+function FlagOverridePanel({ orgId }: { orgId: string }) {
+  const flags = trpc.featureFlag.list.useQuery(undefined, { retry: false });
+  const setOverride = trpc.featureFlag.setOverride.useMutation();
+
+  return (
+    <section className="border-2 border-white/30 bg-black/50 p-4">
+      <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">FEATURE FLAG OVERRIDES</h2>
+      <p className="font-mono text-[10px] text-white/50 mb-3">Force ON/OFF per flag for this org. Clear to fall back to global + rollout %.</p>
+      <table className="w-full font-mono text-xs">
+        <thead className="text-white/50"><tr>
+          <th className="text-left py-1">KEY</th>
+          <th className="text-left">GLOBAL</th>
+          <th className="text-right">OVERRIDE</th>
+        </tr></thead>
+        <tbody>
+          {flags.data?.map(f => (
+            <tr key={f.key} className="border-t border-white/10">
+              <td className="py-1 text-[var(--color-brand)]">{f.key}</td>
+              <td className="text-white/60">{f.enabledGlobally ? 'ON' : 'OFF'} · {f.rolloutPct}%</td>
+              <td className="text-right space-x-1">
+                <button onClick={() => setOverride.mutate({ organizationId: orgId, flagKey: f.key, enabled: true })}
+                  className="text-[10px] bg-green-700 hover:bg-green-600 text-white px-2 py-0.5">FORCE ON</button>
+                <button onClick={() => setOverride.mutate({ organizationId: orgId, flagKey: f.key, enabled: false })}
+                  className="text-[10px] bg-neutral-700 hover:bg-neutral-600 text-white px-2 py-0.5">FORCE OFF</button>
+                <button onClick={() => setOverride.mutate({ organizationId: orgId, flagKey: f.key, enabled: null })}
+                  className="text-[10px] text-white/60 hover:text-white px-2 py-0.5 underline">clear</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
