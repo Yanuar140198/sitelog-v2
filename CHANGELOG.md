@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.8.0 — 2026-05-22
+
+Consolidated milestone since v0.5.0.
+
+### Major features
+- **Feature flag system** (v0.7.0/v0.7.1/v0.7.2):
+  - DB tables + 5 seeded flags
+  - FNV-1a hash for deterministic per-org bucketing
+  - 4 tRPC procedures + super-admin UI
+  - `useFeatureFlag` React hooks
+  - AI Suggest button gated on `ai-suggest` (live wiring)
+- **REST API expansion**:
+  - GET /exports/projects.csv + /exports/entries.csv
+  - POST /debug/echo integration sanity
+  - 12 total REST endpoints
+- **Session management**:
+  - session.list/revoke/revokeOthers tRPC
+  - Settings ActiveSessions UI with CURRENT badge
+- **Super-admin tooling**:
+  - /superadmin/{users, audit, security, api-keys, announcements, flags, webhooks}
+  - admin.{recentAudit, recentWebhookDeliveries, recentFailedLogins, killUserSessions, revokeApiKey, setPlan, listApiKeys, searchUsers}
+- **Public endpoints**:
+  - GET /stats + /badge/{status,projects,entries}
+
+### Tests
+- 86 unit (+8 feature-flags) | 64 E2E | **Total: 150**
+
+### Final stats
+- 41 release tags · 32 tRPC routers + 12 REST endpoints
+- 10 settings tabs + 10 super-admin tabs
+
 ## v0.3.3 — 2026-05-22
 
 ### Tests
