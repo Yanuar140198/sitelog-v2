@@ -57,6 +57,24 @@ export const adminRouter = router({
     }));
   }),
 
+  /** Recent failed logins (last 24h/7d/30d) — security monitoring. */
+  recentFailedLogins: superProcedure
+    .input(z.object({ limit: z.number().min(1).max(500).default(100), since: z.enum(['24h', '7d', '30d']).default('24h') }))
+    .query(async ({ ctx, input }) => {
+      const { sql } = await import('drizzle-orm');
+      const interval = input.since === '24h' ? '24 hours' : input.since === '7d' ? '7 days' : '30 days';
+      const rows: any = await ctx.db.execute(sql`
+        SELECT id, email, success, reason, ip_address, user_agent, created_at
+        FROM login_log
+        WHERE success = 'false' AND created_at > NOW() - INTERVAL ${sql.raw(`'${interval}'`)}
+        ORDER BY created_at DESC LIMIT ${input.limit}
+      `);
+      return (rows.rows ?? rows) as Array<{
+        id: string; email: string; success: string; reason: string | null;
+        ip_address: string | null; user_agent: string | null; created_at: Date;
+      }>;
+    }),
+
   /** Search users platform-wide (super-admin). */
   searchUsers: superProcedure
     .input(z.object({ q: z.string().min(0).max(120), limit: z.number().min(1).max(200).default(50) }))
