@@ -76,7 +76,6 @@ open https://sitelog.app/signup                            # create first org
 - **Stripe**: dashboard → Webhooks → `https://api.sitelog.app/api/webhooks/stripe` events: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_*`. Copy signing secret → `STRIPE_WEBHOOK_SECRET` Vercel env.
 - **Resend**: domain verified → API key → `RESEND_API_KEY` Vercel env.
 - **R2**: bucket created → `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_BUCKET_PHOTOS` Vercel env.
-- **Anthropic**: API key → `ANTHROPIC_API_KEY` Vercel env. AI Suggest button auto-uses it.
 - **Sentry**: project DSN → `SENTRY_DSN` Vercel env. Server-side init wires automatically.
 
 ## 9. Seed AHSP catalog (optional)

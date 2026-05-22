@@ -9,7 +9,6 @@ import { dashboardRouter } from './dashboard.js';
 import { billingRouter } from './billing.js';
 import { inviteRouter } from './invite.js';
 import { storageRouter } from './storage.js';
-import { aiRouter } from './ai.js';
 import { boqVersionRouter } from './boq-version.js';
 import { exportRouter } from './export.js';
 import { intellitracRouter } from './intellitrac.js';
@@ -44,7 +43,6 @@ export const appRouter = router({
   billing: billingRouter,
   invite: inviteRouter,
   storage: storageRouter,
-  ai: aiRouter,
   boqVersion: boqVersionRouter,
   export: exportRouter,
   intellitrac: intellitracRouter,

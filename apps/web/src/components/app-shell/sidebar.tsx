@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FolderKanban, Calculator, Truck, ClipboardList, BarChart3, Settings, Sparkles, ShieldCheck, FileStack, Wrench } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Calculator, Truck, ClipboardList, BarChart3, Settings, ShieldCheck, FileStack, Wrench, HardHat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -11,10 +11,10 @@ const NAV = [
   { href: '/app/ahsp', label: 'AHSP Catalog', icon: Calculator },
   { href: '/app/templates', label: 'Templates', icon: FileStack },
   { href: '/app/fleet', label: 'Fleet', icon: Truck },
+  { href: '/app/crew', label: 'Crew', icon: HardHat },
   { href: '/app/maintenance', label: 'Maintenance', icon: Wrench },
   { href: '/app/entries', label: 'Daily Entries', icon: ClipboardList },
   { href: '/app/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/app/ai', label: 'AI Assistant', icon: Sparkles },
   { href: '/app/audit', label: 'Audit Log', icon: ShieldCheck },
   { href: '/app/settings', label: 'Settings', icon: Settings },
 ];

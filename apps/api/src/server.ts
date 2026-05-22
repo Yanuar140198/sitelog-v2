@@ -137,9 +137,6 @@ app.get('/status', async (c) => {
     checks.stripe = { ok: false, error: 'not configured' };
   }
 
-  // Opt-in: AI (config check only — don't burn credits)
-  checks.ai = { ok: !!process.env.ANTHROPIC_API_KEY, ...(process.env.ANTHROPIC_API_KEY ? {} : { error: 'not configured' }) };
-
   // Opt-in: R2 (config check)
   checks.r2 = { ok: !!process.env.R2_ACCOUNT_ID, ...(process.env.R2_ACCOUNT_ID ? {} : { error: 'not configured' }) };
 
@@ -167,18 +164,6 @@ app.post('/api/cron/prune-idempotency', async (c) => {
   `);
   const pruned = ((r.rows ?? r) as unknown[]).length;
   return c.json({ ok: true, pruned });
-});
-
-/** Auto-tag photos cron — every 10 min. */
-app.post('/api/cron/photo-tag', async (c) => {
-  const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
-    return c.json({ ok: false, error: 'forbidden' }, 403);
-  }
-  const { processUntaggedPhotos } = await import('./lib/photo-tagger.js');
-  const limit = Number(c.req.query('limit') ?? 10);
-  const result = await processUntaggedPhotos(limit);
-  return c.json({ ok: true, ...result });
 });
 
 /** Cron endpoint — call daily via Vercel Cron / external scheduler.

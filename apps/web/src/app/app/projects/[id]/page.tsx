@@ -4,17 +4,14 @@ import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, X, FileSearch, Download, History, Truck, FileStack, Sparkles, Users, Upload, ShieldCheck, BarChart3, Zap } from 'lucide-react';
+import { Search, X, FileSearch, Download, History, Truck, FileStack, Users, Upload, BarChart3, Zap, ShieldAlert, Package } from 'lucide-react';
 import Link from 'next/link';
 import { AhspDetailDrawer } from '@/components/boq/ahsp-detail-drawer';
 import { BoqVersionPanel } from '@/components/boq/boq-version-panel';
 import { ProjectFleetPanel } from '@/components/fleet/project-fleet-panel';
 import { TemplateBrowser } from '@/components/boq/template-browser';
-import { AiSuggestPanel } from '@/components/boq/ai-suggest-panel';
 import { ProjectMemberPanel } from '@/components/project/member-panel';
 import { XlsxImport } from '@/components/boq/xlsx-import';
-import { RateSanityPanel } from '@/components/boq/rate-sanity-panel';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 
 export default function ProjectBoqPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -28,10 +25,8 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
   const [showVersions, setShowVersions] = useState(false);
   const [showFleet, setShowFleet] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [showAi, setShowAi] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [showSanity, setShowSanity] = useState(false);
 
   const exportXlsx = trpc.export.boqXlsx.useMutation({
     onSuccess: (data) => {
@@ -116,14 +111,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
             <Link href={`/app/projects/${id}/schedule`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="Schedule (S-curve + Gantt + Baseline)">
               <BarChart3 size={14} />
             </Link>
-            {useFeatureFlag('ai-suggest') && (
-              <button onClick={() => setShowAi(true)} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)]" title="AI Suggestions">
-                <Sparkles size={14} />
-              </button>
-            )}
-            <button onClick={() => setShowSanity(true)} className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Rate Sanity Check">
-              <ShieldCheck size={14} />
-            </button>
+            <Link href={`/app/projects/${id}/hse`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="HSE Incident Log">
+              <ShieldAlert size={14} />
+            </Link>
             <button onClick={() => setShowTemplates(true)} className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Templates">
               <FileStack size={14} />
             </button>
@@ -147,6 +137,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
             </button>
             <Link href={`/app/projects/${id}/quick-add`} className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Quick Add Scopes">
               <Zap size={14} />
+            </Link>
+            <Link href={`/app/projects/${id}/materials`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)]" title="Material Stock + Delivery">
+              <Package size={14} />
             </Link>
           </div>
         </div>
@@ -242,10 +235,8 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
       {showVersions && <BoqVersionPanel projectId={id} onClose={() => setShowVersions(false)} />}
       {showFleet && <ProjectFleetPanel projectId={id} onClose={() => setShowFleet(false)} />}
       {showTemplates && <TemplateBrowser projectId={id} onClose={() => setShowTemplates(false)} />}
-      {showAi && <AiSuggestPanel projectId={id} onClose={() => setShowAi(false)} />}
       {showMembers && <ProjectMemberPanel projectId={id} onClose={() => setShowMembers(false)} />}
       {showImport && <XlsxImport projectId={id} onClose={() => setShowImport(false)} />}
-      {showSanity && <RateSanityPanel projectId={id} onClose={() => setShowSanity(false)} />}
     </div>
   );
 }

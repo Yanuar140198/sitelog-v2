@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.13.0 — 2026-05-22
+
+### Removed
+- **All AI features** — surgical removal of Claude/Anthropic integration to refocus on operational features.
+  - Deleted `apps/api/src/router/ai.ts` (ask, suggestBoq, analyzePhoto, rateSanity procedures)
+  - Deleted `/app/ai` page, `AiSuggestPanel`, `PhotoAiPanel`, `RateSanityPanel`
+  - Removed `photo-tagger` cron + library, AI healthz check, `ai_calls_total` metric
+  - Removed `AI Assistant` sidebar entry, command-palette `?` AI mode, project AI button
+  - Removed `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` env vars from `.env.example`, CSP `api.anthropic.com` whitelist, DEPLOY_NOW Anthropic step
+  - DB columns (`ai_caption`, `ai_tags`, `ai_progress_pct`, `ai_analyzed_at`) and `ai_calls` usage metric left dormant for backward-compat; `ai-suggest` feature flag left in DB migration history
+
 ## v0.8.0 — 2026-05-22
 
 Consolidated milestone since v0.5.0.

@@ -19,7 +19,6 @@ const counters: Record<string, Counter> = {
   trpc_calls_total:         { value: 0 },
   rest_calls_total:         { value: 0 },
   webhook_dispatched_total: { value: 0 },
-  ai_calls_total:           { value: 0 },
 };
 
 export function bump(name: keyof typeof counters, n = 1) {

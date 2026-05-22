@@ -2,15 +2,13 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { trpc } from '@sitelog/api-client/react';
-import { ArrowLeft, MapPin, Clock, Users, CloudSun, Camera, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Users, CloudSun, Camera } from 'lucide-react';
 import { Lightbox } from '@/components/photo/lightbox';
-import { PhotoAiPanel } from '@/components/photo/photo-ai-panel';
 
 export default function EntryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const detail = trpc.entry.detail.useQuery({ id });
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [aiPhotoUrl, setAiPhotoUrl] = useState<string | null>(null);
   if (!detail.data) return <div className="p-8 font-mono text-sm">Loading...</div>;
   const e = detail.data;
 
@@ -86,40 +84,19 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
       <Section title={`PHOTOS (${e.photos.length})`}>
         {e.photos.length === 0 ? <Empty /> : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {e.photos.map((p: any, idx) => {
-              const aiTags = (() => { try { return JSON.parse(p.aiTags ?? '[]'); } catch { return []; } })();
-              return (
+            {e.photos.map((p: any, idx) => (
                 <div key={p.id} className="border-2 border-[var(--color-ink)] aspect-square bg-neutral-100 relative overflow-hidden hover:shadow-[3px_3px_0_var(--color-brand)] transition group">
                   <button onClick={() => setLightbox(idx)} className="absolute inset-0 cursor-zoom-in">
-                    {p.url ? <img src={p.url} alt={p.aiCaption ?? p.caption ?? ''} className="w-full h-full object-cover" />
+                    {p.url ? <img src={p.url} alt={p.caption ?? ''} className="w-full h-full object-cover" />
                       : <div className="absolute inset-0 flex items-center justify-center text-neutral-400"><Camera size={32} /></div>}
                   </button>
-                  {p.aiAnalyzedAt && (
-                    <div className="absolute top-1 left-1 bg-[var(--color-brand)] text-white px-1.5 py-0.5 font-mono text-[8px] font-bold flex items-center gap-0.5 pointer-events-none">
-                      <Sparkles size={8} /> AI
-                    </div>
-                  )}
-                  {p.aiProgressPct !== null && p.aiProgressPct !== undefined && (
-                    <div className="absolute top-1 right-1 bg-black/80 text-white px-1.5 py-0.5 font-mono text-[8px] font-bold pointer-events-none">
-                      {Number(p.aiProgressPct).toFixed(0)}%
-                    </div>
-                  )}
-                  {(p.aiCaption || p.caption) && (
+                  {p.caption && (
                     <div className="absolute bottom-0 inset-x-0 bg-black/70 text-white p-2 font-mono text-[10px] text-left pointer-events-none">
-                      {p.aiCaption ?? p.caption}
-                      {aiTags.length > 0 && <div className="mt-1 text-[8px] text-white/70">{aiTags.slice(0, 3).map((t: string) => `#${t}`).join(' ')}</div>}
+                      {p.caption}
                     </div>
-                  )}
-                  {p.url && (
-                    <button onClick={(ev) => { ev.stopPropagation(); setAiPhotoUrl(p.url!); }}
-                      className="absolute bottom-1 right-1 bg-[var(--color-brand)] text-white p-1 opacity-0 group-hover:opacity-100 transition z-10"
-                      title="AI re-analyze">
-                      <Sparkles size={10} />
-                    </button>
                   )}
                 </div>
-              );
-            })}
+              ))}
           </div>
         )}
       </Section>
@@ -127,7 +104,6 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
         <Lightbox photos={e.photos.map(p => ({ url: p.url, caption: p.caption, lat: p.lat as any, lng: p.lng as any }))}
           startIndex={lightbox} onClose={() => setLightbox(null)} />
       )}
-      {aiPhotoUrl && <PhotoAiPanel imageUrl={aiPhotoUrl} context={`Entry date: ${e.entryDate}, shift ${e.shift}`} onClose={() => setAiPhotoUrl(null)} />}
 
       {e.submittedAtLat && e.submittedAtLng && (
         <div className="font-mono text-xs text-neutral-500 flex items-center gap-1">
