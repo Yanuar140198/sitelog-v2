@@ -56,6 +56,40 @@ app.use('*', cors({
 
 app.get('/healthz', (c) => c.json({ ok: true, ts: Date.now() }));
 
+// Public stats — anonymized platform counts (orgs, projects, entries).
+// Cached aggressively so it can be polled by status pages + marketing widgets.
+app.get('/stats', async (c) => {
+  try {
+    const r: any = await db.execute(sql`
+      SELECT
+        (SELECT COUNT(*)::int FROM organization)            AS orgs,
+        (SELECT COUNT(*)::int FROM project WHERE deleted_at IS NULL) AS projects,
+        (SELECT COUNT(*)::int FROM daily_entry)             AS entries
+    `);
+    const row = (r.rows ?? r)[0] ?? {};
+    return c.json({
+      orgs: Number(row.orgs ?? 0),
+      projects: Number(row.projects ?? 0),
+      entries: Number(row.entries ?? 0),
+      ts: Date.now(),
+    }, 200, { 'cache-control': 'public, max-age=300' });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+// Counter-style badges for shields.io endpoint pattern
+app.get('/badge/projects', async (c) => {
+  let n = 0;
+  try { const r: any = await db.execute(sql`SELECT COUNT(*)::int AS n FROM project WHERE deleted_at IS NULL`); n = Number(((r.rows ?? r)[0] ?? {}).n ?? 0); } catch {}
+  return c.json({ schemaVersion: 1, label: 'projects', message: String(n), color: 'blue' }, 200, { 'cache-control': 'public, max-age=300' });
+});
+app.get('/badge/entries', async (c) => {
+  let n = 0;
+  try { const r: any = await db.execute(sql`SELECT COUNT(*)::int AS n FROM daily_entry`); n = Number(((r.rows ?? r)[0] ?? {}).n ?? 0); } catch {}
+  return c.json({ schemaVersion: 1, label: 'entries', message: String(n), color: 'blue' }, 200, { 'cache-control': 'public, max-age=300' });
+});
+
 // Public uptime badge — shields.io compatible JSON for README embeds.
 // Returns { schemaVersion, label, message, color } for shields.io endpoint badges.
 app.get('/badge/status', async (c) => {
