@@ -45,6 +45,25 @@ test.describe('Observability endpoints', () => {
   });
 });
 
+test.describe('Public badge + changelog', () => {
+  test('GET /badge/status returns shields.io endpoint JSON', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/badge/status');
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.schemaVersion).toBe(1);
+    expect(body.label).toBe('sitelog');
+    expect(['operational', 'degraded']).toContain(body.message);
+    expect(['brightgreen', 'red']).toContain(body.color);
+  });
+
+  test('GET /badge/status has 60s cache header', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/badge/status');
+    expect(res.headers()['cache-control']).toMatch(/max-age=60/);
+  });
+});
+
 test.describe('Security headers', () => {
   test('every response carries safe defaults', async () => {
     const ctx = await request.newContext({ baseURL: API_BASE });

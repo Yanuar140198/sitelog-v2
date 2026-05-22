@@ -23,6 +23,12 @@ test.describe('Public marketing', () => {
     await expect(page.getByText(/Enterprise/i).first()).toBeVisible();
   });
 
+  test('changelog page renders releases', async ({ page }) => {
+    await page.goto('/changelog', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: /Changelog/i })).toBeVisible();
+    await expect(page.getByText(/v0\./).first()).toBeVisible();
+  });
+
   test('status page reports component health', async ({ page }) => {
     await page.goto('/status');
     await expect(page.getByText(/components/i)).toBeVisible();
