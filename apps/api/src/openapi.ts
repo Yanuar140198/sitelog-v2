@@ -8,7 +8,22 @@ export const openApiSpec = {
   info: {
     title: 'Sitelog API',
     version: '1.0.0',
-    description: 'Construction estimating + tracking REST API. Auth via API keys generated at /app/settings/api-keys.',
+    description: [
+      'Construction estimating + tracking REST API.',
+      '',
+      '**Auth**: Bearer `sk_live_*` API keys generated at `/app/settings/api-keys`.',
+      '',
+      '**Rate limits** (per API key, per minute):',
+      '- `read` scope: 300',
+      '- `write` scope: 120',
+      '- `admin` scope: 60',
+      '',
+      'Every response includes `X-RateLimit-Limit` + `X-RateLimit-Remaining`. 429 + `Retry-After` on quota breach.',
+      '',
+      '**Request tracing**: every response carries `X-Request-ID`. Include in support tickets.',
+      '',
+      '**Idempotency**: POST endpoints accept `Idempotency-Key` header. Same key + same body within 24h returns cached response (header `X-Idempotent-Replay: 1`). Different body → 409.',
+    ].join('\n'),
     contact: { name: 'Sitelog', email: 'support@sitelog.app' },
   },
   servers: [
