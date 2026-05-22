@@ -63,6 +63,20 @@ test.describe('REST API v1', () => {
   });
 });
 
+test.describe('Rate limit headers', () => {
+  test.skip(!API_KEY, 'SITELOG_API_KEY not set');
+
+  test('every authed response carries X-RateLimit-* headers', async () => {
+    const ctx = await request.newContext({ baseURL: API_BASE });
+    const res = await ctx.get('/api/v1/me', { headers: { authorization: `Bearer ${API_KEY}` } });
+    expect(res.ok()).toBeTruthy();
+    const h = res.headers();
+    expect(h['x-ratelimit-limit']).toMatch(/^\d+$/);
+    expect(h['x-ratelimit-remaining']).toMatch(/^\d+$/);
+    expect(Number(h['x-ratelimit-remaining'])).toBeLessThan(Number(h['x-ratelimit-limit']));
+  });
+});
+
 test.describe('Idempotency (POST /entries)', () => {
   test.skip(!API_KEY, 'SITELOG_API_KEY not set');
 
