@@ -102,17 +102,38 @@ export const adminRouter = router({
   }),
 
   stats: superProcedure.query(async ({ ctx }) => {
+    const { sql } = await import('drizzle-orm');
     const [orgCount] = await ctx.db.select({ c: count() }).from(organization);
     const [userCount] = await ctx.db.select({ c: count() }).from(user);
     const [projCount] = await ctx.db.select({ c: count() }).from(project);
     const subRows = await ctx.db.select().from(subscription);
     const planCounts: Record<string, number> = {};
     for (const s of subRows) planCounts[s.plan] = (planCounts[s.plan] ?? 0) + 1;
+    const recent: any = await ctx.db.execute(sql`
+      SELECT
+        (SELECT COUNT(*)::int FROM daily_entry WHERE created_at > NOW() - INTERVAL '24 hours') AS entries_24h,
+        (SELECT COUNT(*)::int FROM daily_entry WHERE created_at > NOW() - INTERVAL '7 days')   AS entries_7d,
+        (SELECT COUNT(*)::int FROM audit_log   WHERE created_at > NOW() - INTERVAL '24 hours') AS audit_24h,
+        (SELECT COUNT(*)::int FROM "user"      WHERE created_at > NOW() - INTERVAL '7 days')   AS users_7d,
+        (SELECT COUNT(*)::int FROM organization WHERE created_at > NOW() - INTERVAL '7 days')  AS orgs_7d,
+        (SELECT COUNT(*)::int FROM webhook_endpoint WHERE active = true)                       AS webhooks_active,
+        (SELECT COUNT(*)::int FROM api_key WHERE revoked_at IS NULL)                           AS api_keys_active
+    `);
+    const r = (recent.rows ?? recent)[0] ?? {};
     return {
       orgs: Number(orgCount?.c ?? 0),
       users: Number(userCount?.c ?? 0),
       projects: Number(projCount?.c ?? 0),
       bySubscriptionPlan: planCounts,
+      recency: {
+        entries24h: Number(r.entries_24h ?? 0),
+        entries7d:  Number(r.entries_7d ?? 0),
+        audit24h:   Number(r.audit_24h ?? 0),
+        users7d:    Number(r.users_7d ?? 0),
+        orgs7d:     Number(r.orgs_7d ?? 0),
+        webhooksActive: Number(r.webhooks_active ?? 0),
+        apiKeysActive:  Number(r.api_keys_active ?? 0),
+      },
     };
   }),
 });
