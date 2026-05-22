@@ -57,6 +57,26 @@ export const adminRouter = router({
     }));
   }),
 
+  /** Search users platform-wide (super-admin). */
+  searchUsers: superProcedure
+    .input(z.object({ q: z.string().min(0).max(120), limit: z.number().min(1).max(200).default(50) }))
+    .query(async ({ ctx, input }) => {
+      const { sql } = await import('drizzle-orm');
+      const pattern = '%' + input.q.toLowerCase() + '%';
+      const rows: any = await ctx.db.execute(sql`
+        SELECT u.id, u.email, u.name, u.created_at, u.last_login_at,
+          (SELECT COUNT(*)::int FROM membership m WHERE m.user_id = u.id) AS org_count
+        FROM "user" u
+        WHERE LOWER(u.email) LIKE ${pattern} OR LOWER(COALESCE(u.name, '')) LIKE ${pattern}
+        ORDER BY u.created_at DESC
+        LIMIT ${input.limit}
+      `);
+      return (rows.rows ?? rows) as Array<{
+        id: string; email: string; name: string | null;
+        created_at: Date; last_login_at: Date | null; org_count: number;
+      }>;
+    }),
+
   orgDetail: superProcedure.input(z.object({ slug: z.string() })).query(async ({ ctx, input }) => {
     const [org] = await ctx.db.select().from(organization).where(eq(organization.slug, input.slug)).limit(1);
     if (!org) throw new TRPCError({ code: 'NOT_FOUND', message: 'Organization not found' });
