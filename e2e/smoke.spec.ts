@@ -29,6 +29,17 @@ test.describe('Public marketing', () => {
     await expect(page.getByText(/v0\./).first()).toBeVisible();
   });
 
+  test('changelog RSS feed returns valid XML', async ({ request }) => {
+    const res = await request.get('/changelog/rss.xml');
+    expect(res.ok()).toBeTruthy();
+    expect(res.headers()['content-type']).toMatch(/application\/rss\+xml/);
+    const body = await res.text();
+    expect(body).toContain('<?xml version="1.0"');
+    expect(body).toContain('<rss version="2.0">');
+    expect(body).toContain('<channel>');
+    expect(body).toMatch(/<title>v\d/);
+  });
+
   test('status page reports component health', async ({ page }) => {
     await page.goto('/status');
     await expect(page.getByText(/components/i)).toBeVisible();
