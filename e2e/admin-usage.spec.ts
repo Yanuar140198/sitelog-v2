@@ -1,0 +1,45 @@
+import { test, expect } from '@playwright/test';
+
+const EMAIL = process.env.E2E_EMAIL ?? 'demo@sitelog.local';
+const PASSWORD = process.env.E2E_PASSWORD ?? 'demopass123';
+
+async function login(page: any) {
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.fill('#email', EMAIL);
+  await page.fill('#password', PASSWORD);
+  await page.click('button[type=submit]');
+  await page.waitForURL(/\/app/, { timeout: 10_000 });
+}
+
+test.describe('Settings → Usage', () => {
+  test('renders quota meters + plan limits table', async ({ page }) => {
+    await login(page);
+    await page.goto('/app/settings/usage', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByText(/THIS MONTH/i)).toBeVisible();
+    await expect(page.getByText(/AI calls/i).first()).toBeVisible();
+    await expect(page.getByText(/Storage \(photos\)/i)).toBeVisible();
+    await expect(page.getByText(/PLAN LIMITS/i)).toBeVisible();
+    await expect(page.getByText(/Projects/i).first()).toBeVisible();
+  });
+});
+
+test.describe('Super admin dashboard recency', () => {
+  test('renders KPI cards with growth subtitles + recency row', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2000);
+    await expect(page.getByText(/^ORGANIZATIONS$/).first()).toBeVisible();
+    await expect(page.getByText(/^USERS$/)).toBeVisible();
+    await expect(page.getByText(/ENTRIES \(24h\)/i)).toBeVisible();
+    await expect(page.getByText(/AUDIT \(24h\)/i)).toBeVisible();
+    await expect(page.getByText(/WEBHOOKS ACTIVE/i)).toBeVisible();
+  });
+
+  test('webhooks activity page renders', async ({ page }) => {
+    await login(page);
+    await page.goto('/superadmin/webhooks', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('heading', { name: /Webhook Activity/i })).toBeVisible();
+  });
+});
