@@ -57,6 +57,36 @@ export const adminRouter = router({
     }));
   }),
 
+  /** Database stats: table sizes, row counts, connection state. Ops view. */
+  databaseStats: superProcedure.query(async ({ ctx }) => {
+    const { sql } = await import('drizzle-orm');
+    const tablesQ: any = await ctx.db.execute(sql`
+      SELECT
+        relname AS table_name,
+        n_live_tup AS rows,
+        pg_total_relation_size(C.oid) AS total_bytes,
+        pg_relation_size(C.oid) AS table_bytes
+      FROM pg_class C
+      LEFT JOIN pg_namespace N ON N.oid = C.relnamespace
+      LEFT JOIN pg_stat_user_tables S ON S.relid = C.oid
+      WHERE C.relkind = 'r' AND N.nspname = 'public'
+      ORDER BY pg_total_relation_size(C.oid) DESC
+      LIMIT 30
+    `);
+    const connQ: any = await ctx.db.execute(sql`
+      SELECT state, COUNT(*)::int AS n
+      FROM pg_stat_activity
+      WHERE datname = current_database()
+      GROUP BY state
+    `);
+    const dbSizeQ: any = await ctx.db.execute(sql`SELECT pg_database_size(current_database()) AS bytes`);
+    return {
+      tables: (tablesQ.rows ?? tablesQ) as Array<{ table_name: string; rows: number; total_bytes: number; table_bytes: number }>,
+      connections: (connQ.rows ?? connQ) as Array<{ state: string | null; n: number }>,
+      databaseBytes: Number(((dbSizeQ.rows ?? dbSizeQ)[0] ?? {}).bytes ?? 0),
+    };
+  }),
+
   /** Revoke any API key platform-wide (compromise response). */
   revokeApiKey: superProcedure
     .input(z.object({ keyId: z.string().uuid() }))

@@ -15,6 +15,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <Link href="/superadmin/security" className="hover:underline">SECURITY</Link>
           <Link href="/superadmin/api-keys" className="hover:underline">API KEYS</Link>
           <Link href="/superadmin/flags" className="hover:underline">FLAGS</Link>
+          <Link href="/superadmin/database" className="hover:underline">DB</Link>
           <Link href="/app" className="hover:underline">↩ APP</Link>
         </div>
       </header>
