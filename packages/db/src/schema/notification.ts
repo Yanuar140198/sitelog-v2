@@ -1,7 +1,7 @@
 /**
  * In-app notifications + user preferences.
  */
-import { pgTable, text, varchar, uuid, timestamp, boolean, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, uuid, timestamp, boolean, pgEnum, index, jsonb } from 'drizzle-orm/pg-core';
 import { user, organization } from './tenancy';
 
 export const notificationKind = pgEnum('notification_kind', [
@@ -48,6 +48,24 @@ export const pushSubscription = pgTable('push_subscription', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, t => [index('push_user_idx').on(t.userId)]);
 
+/**
+ * Outbound integration channels per org (Slack/Discord/Email).
+ * Routes domain events to external systems.
+ */
+export const notificationChannel = pgTable('notification_channel', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').notNull().references(() => organization.id, { onDelete: 'cascade' }),
+  channelType: varchar('channel_type', { length: 32 }).notNull(),  // 'slack' | 'discord' | 'email'
+  name: varchar('name', { length: 120 }).notNull(),
+  webhookUrl: text('webhook_url'),
+  emailAddress: varchar('email_address', { length: 255 }),
+  events: jsonb('events').notNull().default([]).$type<string[]>(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, t => [index('notif_channel_org_idx').on(t.organizationId)]);
+
 export type Notification = typeof notification.$inferSelect;
 export type UserPreference = typeof userPreference.$inferSelect;
 export type PushSubscription = typeof pushSubscription.$inferSelect;
+export type NotificationChannel = typeof notificationChannel.$inferSelect;
