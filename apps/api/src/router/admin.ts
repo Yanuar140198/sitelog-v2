@@ -92,6 +92,31 @@ export const adminRouter = router({
     return { org, subscription: sub ?? null, members, projects };
   }),
 
+  /** Recent audit events platform-wide — security review. */
+  recentAudit: superProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(500).default(100),
+      actionPrefix: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { auditLog: al } = await import('@sitelog/db');
+      const { sql, like, desc: descFn } = await import('drizzle-orm');
+      const rows = await ctx.db.select({
+        id: al.id,
+        organizationId: al.organizationId,
+        actorId: al.actorId,
+        action: al.action,
+        resource: al.resource,
+        resourceId: al.resourceId,
+        ipAddress: al.ipAddress,
+        createdAt: al.createdAt,
+      }).from(al)
+        .where(input.actionPrefix ? like(al.action, `${input.actionPrefix}%`) : sql`true`)
+        .orderBy(descFn(al.createdAt))
+        .limit(input.limit);
+      return rows;
+    }),
+
   /** Recent webhook deliveries across all orgs — ops debugging. */
   recentWebhookDeliveries: superProcedure
     .input(z.object({ limit: z.number().min(1).max(500).default(100) }))
