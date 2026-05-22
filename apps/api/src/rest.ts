@@ -11,6 +11,7 @@ import { db, project, boqItem, ahspItem, ahspResource, dailyEntry, entryActivity
 import { eq, and, isNull, desc, inArray } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { projectTotal } from '@sitelog/shared';
+import { rateLimit } from './lib/rate-limit.js';
 
 type RestVars = { orgId: string; scope: Scope };
 const rest = new Hono<{ Variables: RestVars }>();
@@ -35,9 +36,29 @@ function err(code: string, message: string, status = 400) {
   });
 }
 
+// REST API rate limit defaults per scope. Override via env:
+//   REST_LIMIT_READ_PER_MIN, REST_LIMIT_WRITE_PER_MIN, REST_LIMIT_ADMIN_PER_MIN
+const LIMITS_PER_MIN = {
+  read:  Number(process.env.REST_LIMIT_READ_PER_MIN  ?? 300),
+  write: Number(process.env.REST_LIMIT_WRITE_PER_MIN ?? 120),
+  admin: Number(process.env.REST_LIMIT_ADMIN_PER_MIN ?? 60),
+} as const;
+
 rest.use('*', async (c, next) => {
   const auth = await resolveKey(c.req.header('authorization'));
   if (!auth) return err('UNAUTHORIZED', 'Missing or invalid API key', 401);
+
+  // Throttle by (apikey-hash, scope) — apikey identity already isolates per-tenant
+  const keyHash = createHash('sha256').update(c.req.header('authorization') ?? '').digest('hex').slice(0, 16);
+  const limit = LIMITS_PER_MIN[auth.scope] ?? LIMITS_PER_MIN.read;
+  const r = rateLimit({ id: `rest:${keyHash}:${auth.scope}`, limit, windowMs: 60_000 });
+  c.header('X-RateLimit-Limit', String(limit));
+  c.header('X-RateLimit-Remaining', String(r.remaining));
+  if (!r.ok) {
+    c.header('Retry-After', String(r.retryAfter));
+    return err('RATE_LIMITED', `Rate limit exceeded. Retry in ${r.retryAfter}s.`, 429);
+  }
+
   c.set('orgId', auth.orgId);
   c.set('scope', auth.scope);
   await next();
