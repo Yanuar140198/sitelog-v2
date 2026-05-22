@@ -362,6 +362,9 @@ export default function AhspCatalogPage() {
           <Link href={"/app/ahsp/usage" as any} className="font-mono text-[10px] tracking-wider underline text-neutral-700 hover:text-[var(--color-brand)]">USAGE</Link>
           <Link href={"/app/ahsp/sanity" as any} className="font-mono text-[10px] tracking-wider underline text-neutral-700 hover:text-[var(--color-brand)]">SANITY</Link>
           <Link href={"/app/ahsp/compare" as any} className="font-mono text-[10px] tracking-wider underline text-neutral-700 hover:text-[var(--color-brand)]">COMPARE</Link>
+          <Link href={"/app/ahsp/by-resource" as any} className="font-mono text-[10px] tracking-wider underline text-neutral-700 hover:text-[var(--color-brand)]">BY RESOURCE</Link>
+          <Link href={"/app/ahsp/productivity" as any} className="font-mono text-[10px] tracking-wider underline text-neutral-700 hover:text-[var(--color-brand)]">PRODUCTIVITY</Link>
+          <Link href={"/app/ahsp/import" as any} className="font-mono text-[10px] tracking-wider underline text-neutral-700 hover:text-[var(--color-brand)]">IMPORT</Link>
         </div>
       </div>
 
