@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.3.2 — 2026-05-22
+
+### Features
+- `/superadmin/announcements` CRUD UI page (title/body/severity/ends-at/dismissible form + table)
+- `/app/settings/security` page (2FA enable + sessions placeholder + org info)
+- 4 new E2E tests for privacy + announcements
+
+### Stats
+- Total E2E: 40 → 44
+- Settings tabs: 8 → 9 (added SECURITY)
+- Super-admin nav: 3 → 4 tabs
+
+## v0.3.1 — 2026-05-22
+
+### Features
+- `/superadmin/announcements` UI
+
 ## v0.3.0 — 2026-05-22
 
 ### Features
