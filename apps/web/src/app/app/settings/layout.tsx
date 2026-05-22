@@ -9,6 +9,7 @@ const TABS = [
   { href: '/app/settings/webhooks', label: 'WEBHOOKS' },
   { href: '/app/settings/domain', label: 'DOMAIN' },
   { href: '/app/settings/privacy', label: 'PRIVACY' },
+  { href: '/app/settings/security', label: 'SECURITY' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
