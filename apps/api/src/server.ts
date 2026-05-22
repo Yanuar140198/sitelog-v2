@@ -56,6 +56,19 @@ app.use('*', cors({
 
 app.get('/healthz', (c) => c.json({ ok: true, ts: Date.now() }));
 
+// Public uptime badge — shields.io compatible JSON for README embeds.
+// Returns { schemaVersion, label, message, color } for shields.io endpoint badges.
+app.get('/badge/status', async (c) => {
+  let dbOk = false;
+  try { await db.execute(sql`select 1`); dbOk = true; } catch {}
+  return c.json({
+    schemaVersion: 1,
+    label: 'sitelog',
+    message: dbOk ? 'operational' : 'degraded',
+    color: dbOk ? 'brightgreen' : 'red',
+  }, 200, { 'cache-control': 'public, max-age=60' });
+});
+
 // Prometheus metrics — text/plain, optionally token-gated via METRICS_TOKEN env
 app.get('/metrics', async (c) => {
   const token = process.env.METRICS_TOKEN;
