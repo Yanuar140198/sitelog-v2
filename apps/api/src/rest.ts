@@ -158,6 +158,70 @@ rest.get('/entries/:id', async (c) => {
   return c.json({ data: { ...entry.e, project: { id: entry.p.id, code: entry.p.code }, activities } });
 });
 
+function csvEscape(s: any): string {
+  if (s == null) return '';
+  const str = String(s);
+  if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function toCsv(rows: Array<Record<string, any>>, columns: string[]): string {
+  const header = columns.join(',');
+  const lines = rows.map(r => columns.map(c => csvEscape(r[c])).join(','));
+  return [header, ...lines].join('\n');
+}
+
+// GET /api/v1/exports/projects.csv — all org projects as CSV
+rest.get('/exports/projects.csv', async (c) => {
+  const orgId = c.get('orgId');
+  const rows = await db.select({
+    id: project.id, code: project.code, name: project.name, status: project.status,
+    client: project.client, location: project.location,
+    startDate: project.startDate, finishDate: project.finishDate,
+    markupPct: project.markupPct, contingencyPct: project.contingencyPct, ppnPct: project.ppnPct,
+    createdAt: project.createdAt,
+  }).from(project).where(and(eq(project.organizationId, orgId), isNull(project.deletedAt)));
+  const csv = toCsv(rows, ['id', 'code', 'name', 'status', 'client', 'location', 'startDate', 'finishDate', 'markupPct', 'contingencyPct', 'ppnPct', 'createdAt']);
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="sitelog-projects-${new Date().toISOString().slice(0, 10)}.csv"`,
+    },
+  });
+});
+
+// GET /api/v1/exports/entries.csv?projectId=... — daily entries CSV
+rest.get('/exports/entries.csv', async (c) => {
+  const orgId = c.get('orgId');
+  const projectId = c.req.query('projectId');
+  if (projectId) {
+    const [proj] = await db.select().from(project)
+      .where(and(eq(project.id, projectId), eq(project.organizationId, orgId))).limit(1);
+    if (!proj) return err('NOT_FOUND', 'Project not found in your org', 404);
+  }
+  const orgProjectIds = (await db.select({ id: project.id }).from(project)
+    .where(eq(project.organizationId, orgId))).map(p => p.id);
+  if (orgProjectIds.length === 0) {
+    return new Response('id,projectId,entryDate,shift,weather,effectiveHours,workforce,notes,submittedAt\n',
+      { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8' } });
+  }
+  const filter = projectId
+    ? eq(dailyEntry.projectId, projectId)
+    : inArray(dailyEntry.projectId, orgProjectIds);
+  const rows = await db.select().from(dailyEntry).where(filter).limit(10_000);
+  const csv = toCsv(rows as any, ['id', 'projectId', 'entryDate', 'shift', 'weather', 'effectiveHours', 'workforce', 'notes', 'submittedAt']);
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="sitelog-entries-${new Date().toISOString().slice(0, 10)}.csv"`,
+    },
+  });
+});
+
 // GET /api/v1/ahsp — catalog list
 rest.get('/ahsp', async (c) => {
   const orgId = c.get('orgId');
