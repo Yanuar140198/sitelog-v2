@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight, GitMerge, Archive, RefreshCw } from 'lucide-react';
 
 type Severity = 'critical' | 'warning' | 'info';
 const SEVERITY_FILTERS: Array<{ key: 'all' | Severity; label: string }> = [
@@ -24,8 +24,46 @@ const ISSUE_TYPE_TITLES: Record<string, string> = {
 
 export default function AhspSanityCheckPage() {
   const issues = trpc.ahsp.sanityCheck.useQuery();
+  const me = trpc.org.current.useQuery(undefined, { retry: false });
+  const utils = trpc.useUtils();
   const [filter, setFilter] = useState<'all' | Severity>('all');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const canBulk = me.data?.role === 'owner' || me.data?.role === 'admin';
+  const autoMergeFn = (trpc.ahsp as any).autoMergeAllDuplicates?.useMutation?.({
+    onSuccess: (res: any) => {
+      void utils.ahsp.sanityCheck.invalidate();
+      void (utils.ahsp as any).findDuplicates?.invalidate?.();
+      void (utils.ahsp as any).catalogWithRates?.invalidate?.();
+      alert(`Auto-merge complete: ${res.groupsMerged} group(s), ${res.itemsRemoved} item(s) removed, ${res.projectsAffected} project(s) affected.`);
+    },
+    onError: (e: any) => alert(`Auto-merge failed: ${e?.message ?? e}`),
+  });
+  const autoArchiveFn = (trpc.ahsp as any).autoArchiveZeroRate?.useMutation?.({
+    onSuccess: (res: any) => {
+      void utils.ahsp.sanityCheck.invalidate();
+      void (utils.ahsp as any).catalogWithRates?.invalidate?.();
+      alert(`Auto-archive complete: ${res.archived} zero-rate item(s) archived.`);
+    },
+    onError: (e: any) => alert(`Auto-archive failed: ${e?.message ?? e}`),
+  });
+
+  const autoMergeAvailable = !!autoMergeFn;
+  const autoArchiveAvailable = !!autoArchiveFn;
+
+  async function onAutoMerge() {
+    if (!autoMergeFn) return;
+    if (!confirm('Auto-merge ALL duplicate groups?\n\nFor each group the row with the most projects-used will be kept; ties broken by lowest computed rate, then oldest created_at. All boq_item references will be rerouted. This cannot be undone (but a version snapshot is saved on each kept item).')) return;
+    autoMergeFn.mutate({});
+  }
+  async function onAutoArchive() {
+    if (!autoArchiveFn) return;
+    if (!confirm('Auto-archive all org-owned AHSP items whose computed rate is 0?\n\nItems already used in any BoQ are skipped. Archived items can be unarchived later.')) return;
+    autoArchiveFn.mutate({});
+  }
+  function onRefresh() {
+    void utils.ahsp.sanityCheck.invalidate();
+  }
 
   const filtered = useMemo(() => {
     if (!issues.data) return [];
@@ -74,6 +112,45 @@ export default function AhspSanityCheckPage() {
             {' · '}
             <span className="text-neutral-500">{counts.info} info</span>
           </p>
+        </div>
+      </div>
+
+      {/* Bulk actions */}
+      <div className="border-2 border-[var(--color-ink)] bg-white">
+        <div className="px-4 py-2 bg-[var(--color-ink)] text-white font-mono text-xs tracking-[0.2em]">
+          BULK ACTIONS
+        </div>
+        <div className="p-4 flex flex-wrap gap-2 items-center">
+          {canBulk && autoMergeAvailable && (
+            <Button
+              onClick={onAutoMerge}
+              disabled={autoMergeFn?.isPending}
+              className="bg-[var(--color-brand)] hover:bg-[var(--color-ink)] text-white"
+            >
+              <GitMerge size={14} className="mr-2" />
+              {autoMergeFn?.isPending ? 'MERGING…' : 'AUTO-MERGE ALL DUPLICATES'}
+            </Button>
+          )}
+          {canBulk && autoArchiveAvailable && (
+            <Button
+              onClick={onAutoArchive}
+              disabled={autoArchiveFn?.isPending}
+              variant="danger"
+              className="border-2 border-red-600 bg-white text-red-600 hover:bg-red-50"
+            >
+              <Archive size={14} className="mr-2" />
+              {autoArchiveFn?.isPending ? 'ARCHIVING…' : 'AUTO-ARCHIVE ZERO-RATE ITEMS'}
+            </Button>
+          )}
+          <Button onClick={onRefresh} variant="ghost" className="border-2">
+            <RefreshCw size={14} className="mr-2" />
+            REFRESH
+          </Button>
+          {!canBulk && (
+            <span className="font-mono text-[11px] text-neutral-500">
+              Owner or admin role required for bulk actions.
+            </span>
+          )}
         </div>
       </div>
 

@@ -31,6 +31,21 @@ export default function AhspDedupPage() {
       void utils.ahsp.catalogWithRates.invalidate();
     },
   });
+  const autoMergeFn = (trpc.ahsp as any).autoMergeAllDuplicates?.useMutation?.({
+    onSuccess: (res: any) => {
+      void utils.ahsp.findDuplicates.invalidate();
+      void utils.ahsp.catalogWithRates.invalidate();
+      void (utils.ahsp as any).sanityCheck?.invalidate?.();
+      alert(`Auto-merge complete: ${res.groupsMerged} group(s), ${res.itemsRemoved} item(s) removed, ${res.projectsAffected} project(s) affected.`);
+    },
+    onError: (e: any) => alert(`Auto-merge failed: ${e?.message ?? e}`),
+  });
+
+  async function onAutoMergeAll() {
+    if (!autoMergeFn) return;
+    if (!confirm('Auto-merge ALL duplicate groups using "most-used as canonical" heuristic?\n\nTies: lowest computed rate, then oldest created_at. All boq_item references will be rerouted. This cannot be undone (but version snapshots are saved on each kept item).')) return;
+    autoMergeFn.mutate({});
+  }
 
   const [choices, setChoices] = useState<Record<string, GroupChoice>>({});
 
@@ -121,13 +136,25 @@ export default function AhspDedupPage() {
         <ArrowLeft size={14} /> AHSP CATALOG
       </Link>
 
-      <div>
-        <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">TOOLS · DEDUP</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">AHSP Duplicate Resolution</h1>
-        <p className="font-mono text-xs text-neutral-500 mt-2">
-          {groups.length} duplicate group{groups.length === 1 ? '' : 's'} detected
-          {' · '}grouped by case-insensitive (jenis, satuan)
-        </p>
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">TOOLS · DEDUP</p>
+          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">AHSP Duplicate Resolution</h1>
+          <p className="font-mono text-xs text-neutral-500 mt-2">
+            {groups.length} duplicate group{groups.length === 1 ? '' : 's'} detected
+            {' · '}grouped by case-insensitive (jenis, satuan)
+          </p>
+        </div>
+        {groups.length > 0 && autoMergeFn && (
+          <Button
+            onClick={onAutoMergeAll}
+            disabled={autoMergeFn.isPending}
+            className="bg-[var(--color-brand)] hover:bg-[var(--color-ink)] text-white"
+          >
+            <GitMerge size={14} className="mr-2" />
+            {autoMergeFn.isPending ? 'MERGING…' : 'AUTO-MERGE ALL'}
+          </Button>
+        )}
       </div>
 
       {groups.length === 0 && (

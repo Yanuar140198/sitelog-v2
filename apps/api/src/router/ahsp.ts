@@ -1614,4 +1614,521 @@ export const ahspRouter = router({
 
       return { merged, projectsAffected };
     }),
+
+  // ===== AGENT V =====
+  // AGENT V additions: auto-merge all duplicates, auto-archive zero-rate items,
+  // and clone-global-as-org-custom with optional resource auto-match.
+
+  /**
+   * Auto-merge every duplicate group reported by findDuplicates. For each group, pick the
+   * canonical item heuristically:
+   *   1. Most projects-used
+   *   2. Tiebreaker: lowest computed rate (assumed more conservative/accurate)
+   *   3. Tiebreaker: oldest created_at
+   * Then route all boq_item references to the canonical id and delete the rest.
+   * Owner/admin only. Skips groups that contain any non-org-owned (global) items —
+   * those can't be merged via mergeItems guard.
+   */
+  autoMergeAllDuplicates: requireRole('owner', 'admin')
+    .mutation(async ({ ctx }) => {
+      const orgId = ctx.session.organizationId;
+
+      // Org-owned duplicate groups only (global items can't be merged).
+      const result = await ctx.db.execute(sql`
+        WITH visible AS (
+          SELECT ai.id, ai.kode, ai.jenis, ai.satuan, ai.ohp_pct, ai.created_at,
+                 TRIM(LOWER(ai.jenis))  AS jkey,
+                 TRIM(LOWER(ai.satuan)) AS skey
+          FROM ahsp_item ai
+          WHERE ai.organization_id = ${orgId}
+            AND ai.jenis IS NOT NULL AND TRIM(ai.jenis) <> ''
+            AND ai.satuan IS NOT NULL AND TRIM(ai.satuan) <> ''
+        ),
+        dup_keys AS (
+          SELECT jkey, skey FROM visible
+          GROUP BY jkey, skey HAVING COUNT(*) > 1
+        )
+        SELECT v.id, v.kode, v.created_at, v.jkey, v.skey,
+          COALESCE((
+            SELECT SUM(ar.koefisien::float8 * ar.hsd::float8)
+            FROM ahsp_resource ar WHERE ar.ahsp_item_id = v.id
+          ), 0) * (1 + COALESCE(v.ohp_pct, 0)::float8 / 100) AS computed_rate,
+          (
+            SELECT COUNT(DISTINCT p.id)::int
+            FROM boq_item bi JOIN project p ON p.id = bi.project_id
+            WHERE bi.ahsp_item_id = v.id AND p.organization_id = ${orgId}
+          ) AS used_in_projects
+        FROM visible v
+        JOIN dup_keys d ON d.jkey = v.jkey AND d.skey = v.skey
+      `);
+      const rows = ((result as any).rows ?? result) as any[];
+
+      type Cand = { id: string; kode: string; createdAt: any; computedRate: number; usedInProjects: number };
+      const groups = new Map<string, Cand[]>();
+      for (const r of rows) {
+        const key = `${r.jkey}\x1f${r.skey}`;
+        const list = groups.get(key) ?? [];
+        list.push({
+          id: String(r.id),
+          kode: r.kode as string,
+          createdAt: r.created_at,
+          computedRate: Number(r.computed_rate ?? 0),
+          usedInProjects: Number(r.used_in_projects ?? 0),
+        });
+        groups.set(key, list);
+      }
+
+      let groupsMerged = 0;
+      let itemsRemoved = 0;
+      let projectsAffected = 0;
+
+      for (const [, items] of groups) {
+        if (items.length < 2) continue;
+        // Sort by: most used DESC, then lowest rate ASC, then oldest createdAt ASC
+        const sorted = [...items].sort((a, b) => {
+          if (b.usedInProjects !== a.usedInProjects) return b.usedInProjects - a.usedInProjects;
+          if (a.computedRate !== b.computedRate) return a.computedRate - b.computedRate;
+          const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return ta - tb;
+        });
+        const keep = sorted[0]!;
+        const removeIds = sorted.slice(1).map(x => x.id);
+        if (!removeIds.length) continue;
+        const removedKodes = sorted.slice(1).map(x => x.kode);
+
+        await ctx.db.transaction(async (tx) => {
+          const projRes = await tx.execute(sql`
+            SELECT COUNT(DISTINCT bi.project_id)::int AS n
+            FROM boq_item bi
+            WHERE bi.ahsp_item_id IN ${sql.raw(`('${removeIds.join("','")}')`)}
+          `);
+          const projRow = ((projRes as any).rows ?? projRes)[0];
+          projectsAffected += Number(projRow?.n ?? 0);
+
+          for (const removeId of removeIds) {
+            await tx.execute(sql`
+              DELETE FROM boq_item
+              WHERE ahsp_item_id = ${removeId}
+                AND project_id IN (
+                  SELECT project_id FROM boq_item WHERE ahsp_item_id = ${keep.id}
+                )
+            `);
+            await tx.execute(sql`
+              UPDATE boq_item SET ahsp_item_id = ${keep.id}
+              WHERE ahsp_item_id = ${removeId}
+            `);
+          }
+          await tx.delete(ahspItem)
+            .where(and(inArray(ahspItem.id, removeIds), eq(ahspItem.organizationId, orgId)));
+        });
+
+        await snapshotAhsp(
+          ctx.db, keep.id, ctx.session.user.id,
+          `auto-merge: kept ${keep.kode}, removed ${removedKodes.join(', ')}`,
+        );
+
+        groupsMerged++;
+        itemsRemoved += removeIds.length;
+      }
+
+      return { groupsMerged, itemsRemoved, projectsAffected };
+    }),
+
+  /**
+   * Auto-archive every org-owned AHSP item whose computed unit rate is 0
+   * (resources exist but koefisien/hsd produce 0, or no resources at all).
+   * Skips items already linked to a boq_item (safe-by-default — won't break live BoQs).
+   * Owner/admin only.
+   */
+  autoArchiveZeroRate: requireRole('owner', 'admin')
+    .mutation(async ({ ctx }) => {
+      const orgId = ctx.session.organizationId;
+      const result = await ctx.db.execute(sql`
+        SELECT ai.id
+        FROM ahsp_item ai
+        WHERE ai.organization_id = ${orgId}
+          AND ai.archived_at IS NULL
+          AND COALESCE((
+            SELECT SUM(ar.koefisien::float8 * ar.hsd::float8)
+            FROM ahsp_resource ar WHERE ar.ahsp_item_id = ai.id
+          ), 0) * (1 + COALESCE(ai.ohp_pct, 0)::float8 / 100) = 0
+          AND NOT EXISTS (
+            SELECT 1 FROM boq_item bi WHERE bi.ahsp_item_id = ai.id
+          )
+      `);
+      const rows = ((result as any).rows ?? result) as any[];
+      const ids = rows.map(r => String(r.id));
+      if (!ids.length) return { archived: 0 };
+
+      const updated = await ctx.db.update(ahspItem)
+        .set({ archivedAt: new Date(), updatedAt: new Date() })
+        .where(and(
+          inArray(ahspItem.id, ids),
+          eq(ahspItem.organizationId, orgId),
+        ))
+        .returning();
+      return { archived: updated.length };
+    }),
+
+  /**
+   * Mark a global AHSP item as a customized org-scoped copy. Optionally auto-populate
+   * resource lines by keyword-matching the item's jenis against resource_master.nama.
+   * Returns the new org-scoped item id and how many resource rows were added.
+   * Owner/admin only.
+   */
+  markGlobalAsCustomAndFix: requireRole('owner', 'admin')
+    .input(z.object({
+      ahspItemId: z.string().uuid(),
+      autoMatchResources: z.boolean().default(false),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const orgId = ctx.session.organizationId;
+      const [src] = await ctx.db.select().from(ahspItem)
+        .where(and(
+          eq(ahspItem.id, input.ahspItemId),
+          or(isNull(ahspItem.organizationId), eq(ahspItem.organizationId, orgId)),
+        ))
+        .limit(1);
+      if (!src) throw new TRPCError({ code: 'NOT_FOUND', message: 'AHSP item not visible' });
+
+      // Pick a unique kode in org scope
+      let newKode = src.kode;
+      const [dup] = await ctx.db.select({ id: ahspItem.id }).from(ahspItem)
+        .where(and(eq(ahspItem.kode, newKode), eq(ahspItem.organizationId, orgId)))
+        .limit(1);
+      if (dup) newKode = `${src.kode}-ORG`;
+      let suffix = 2;
+      while (true) {
+        const [d] = await ctx.db.select({ id: ahspItem.id }).from(ahspItem)
+          .where(and(eq(ahspItem.kode, newKode), eq(ahspItem.organizationId, orgId)))
+          .limit(1);
+        if (!d) break;
+        newKode = `${src.kode}-ORG${suffix++}`;
+        if (suffix > 50) throw new TRPCError({ code: 'CONFLICT', message: 'Could not find unique kode' });
+      }
+
+      const [created] = await ctx.db.insert(ahspItem).values({
+        organizationId: orgId,
+        kode: newKode,
+        label: src.label,
+        sourceKode: src.sourceKode ?? src.kode,
+        itemNo: src.itemNo,
+        section: src.section,
+        jenis: src.jenis,
+        deskripsi: src.deskripsi,
+        satuan: src.satuan,
+        ohpPct: src.ohpPct,
+        metadata: src.metadata,
+      }).returning();
+      if (!created) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const newId = created.id;
+
+      // Always copy structure (inputs/koefisien/resources) from source.
+      const [srcInputs, srcKoef, srcResources] = await Promise.all([
+        ctx.db.select().from(ahspInput).where(eq(ahspInput.ahspItemId, src.id)),
+        ctx.db.select().from(ahspKoefisien).where(eq(ahspKoefisien.ahspItemId, src.id)),
+        ctx.db.select().from(ahspResource).where(eq(ahspResource.ahspItemId, src.id)),
+      ]);
+      if (srcInputs.length) {
+        await ctx.db.insert(ahspInput).values(srcInputs.map(i => ({
+          ahspItemId: newId, ordinal: i.ordinal, kode: i.kode,
+          variable: i.variable, uraian: i.uraian, nilai: i.nilai,
+          satuan: i.satuan, sumber: i.sumber,
+        })));
+      }
+      if (srcKoef.length) {
+        await ctx.db.insert(ahspKoefisien).values(srcKoef.map(k => ({
+          ahspItemId: newId, ordinal: k.ordinal, kode: k.kode,
+          variable: k.variable, uraian: k.uraian, nilai: k.nilai,
+          satuan: k.satuan, formula: k.formula,
+        })));
+      }
+      if (srcResources.length) {
+        await ctx.db.insert(ahspResource).values(srcResources.map(r => ({
+          ahspItemId: newId, category: r.category, ordinal: r.ordinal,
+          resourceCode: r.resourceCode, uraian: r.uraian,
+          koefisien: r.koefisien, satuan: r.satuan, hsd: r.hsd,
+        })));
+      }
+
+      let resourcesAdded = srcResources.length;
+
+      // Optionally try to fill missing resources by keyword-matching jenis against master.
+      if (input.autoMatchResources && srcResources.length === 0) {
+        const keywords = (src.jenis ?? '')
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter(w => w.length >= 4);
+        if (keywords.length) {
+          const masters = await ctx.db.select().from(resourceMaster)
+            .where(or(isNull(resourceMaster.organizationId), eq(resourceMaster.organizationId, orgId)));
+          const matches = masters.filter(m => {
+            const nm = (m.nama ?? '').toLowerCase();
+            return keywords.some(k => nm.includes(k));
+          }).slice(0, 10);
+          if (matches.length) {
+            const ordByCat: Record<string, number> = { tenaga: 0, bahan: 0, peralatan: 0 };
+            await ctx.db.insert(ahspResource).values(matches.map(m => {
+              const cat = (m.category as string) ?? 'bahan';
+              ordByCat[cat] = (ordByCat[cat] ?? 0) + 1;
+              return {
+                ahspItemId: newId,
+                category: cat as 'tenaga' | 'bahan' | 'peralatan',
+                ordinal: ordByCat[cat]!,
+                resourceCode: m.kode,
+                uraian: m.nama,
+                koefisien: '0',
+                satuan: m.satuan ?? null,
+                hsd: m.defaultHsd ?? '0',
+              };
+            }));
+            resourcesAdded += matches.length;
+          }
+        }
+      }
+
+      await snapshotAhsp(ctx.db, newId, ctx.session.user.id, `cloned from ${src.kode} as org custom`);
+      return { newId, resourcesAdded };
+    }),
+
+  // ===== AGENT W =====
+  // Reverse-lookup AHSP by resource, full cost breakdown for pie charts,
+  // and productivity-based estimator (Q1/Q2/Qt-driven hour/day projection).
+
+  /**
+   * Find every AHSP item that consumes the given resource (by resource_code or master id).
+   * Org-scoped: global + own-org items. Sorted by AHSP kode. Each row carries the matching
+   * resource line's koefisien + hsd + subtotal so the caller can show "how much that resource
+   * contributes" per AHSP without a second roundtrip.
+   */
+  byResource: orgProcedure
+    .input(z.object({
+      resourceCode: z.string().min(1).optional(),
+      resourceMasterId: z.string().uuid().optional(),
+      category: z.enum(['tenaga', 'bahan', 'peralatan']).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      if (!input.resourceCode && !input.resourceMasterId) {
+        return [] as Array<{
+          id: string; kode: string; jenis: string; satuan: string;
+          resourceCode: string; koefisien: number; hsd: number; subtotal: number;
+          computedRate: number; pctOfTotal: number;
+        }>;
+      }
+      const orgId = ctx.session.organizationId;
+
+      // Resolve resourceCode if only master id was supplied
+      let code = input.resourceCode ?? null;
+      if (!code && input.resourceMasterId) {
+        const [m] = await ctx.db.select({ kode: resourceMaster.kode })
+          .from(resourceMaster)
+          .where(eq(resourceMaster.id, input.resourceMasterId))
+          .limit(1);
+        if (!m) return [];
+        code = m.kode;
+      }
+      if (!code) return [];
+
+      const catFilter = input.category
+        ? sql`AND ar.category = ${input.category}`
+        : sql``;
+
+      const result = await ctx.db.execute(sql`
+        SELECT
+          ai.id,
+          ai.kode,
+          ai.jenis,
+          ai.satuan,
+          ai.ohp_pct,
+          ar.resource_code,
+          ar.koefisien::float8  AS koefisien,
+          ar.hsd::float8        AS hsd,
+          (ar.koefisien::float8 * ar.hsd::float8) AS subtotal,
+          COALESCE((
+            SELECT SUM(ar2.koefisien::float8 * ar2.hsd::float8)
+            FROM ahsp_resource ar2 WHERE ar2.ahsp_item_id = ai.id
+          ), 0) AS abc_total
+        FROM ahsp_item ai
+        JOIN ahsp_resource ar ON ar.ahsp_item_id = ai.id
+        WHERE ar.resource_code = ${code}
+          ${catFilter}
+          AND (ai.organization_id IS NULL OR ai.organization_id = ${orgId})
+        ORDER BY ai.kode
+      `);
+      const rows = ((result as any).rows ?? result) as any[];
+      return rows.map(r => {
+        const ohpPct = Number(r.ohp_pct ?? 0);
+        const abc = Number(r.abc_total ?? 0);
+        const computedRate = abc * (1 + ohpPct / 100);
+        const subtotal = Number(r.subtotal ?? 0);
+        const pctOfTotal = computedRate > 0 ? (subtotal / computedRate) * 100 : 0;
+        return {
+          id: String(r.id),
+          kode: r.kode as string,
+          jenis: r.jenis as string,
+          satuan: r.satuan as string,
+          resourceCode: r.resource_code as string,
+          koefisien: Number(r.koefisien ?? 0),
+          hsd: Number(r.hsd ?? 0),
+          subtotal,
+          computedRate,
+          pctOfTotal,
+        };
+      });
+    }),
+
+  /**
+   * Cost breakdown of one AHSP item for charting / "where is the money going":
+   *   - per-category subtotals (tenaga/bahan/peralatan)
+   *   - OHP amount + grand total
+   *   - top 10 resource contributors (sorted DESC by subtotal) with % of grand total
+   */
+  costBreakdown: orgProcedure
+    .input(z.object({ ahspItemId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [item] = await ctx.db.select().from(ahspItem)
+        .where(and(
+          eq(ahspItem.id, input.ahspItemId),
+          or(isNull(ahspItem.organizationId), eq(ahspItem.organizationId, ctx.session.organizationId)),
+        ))
+        .limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const resources = await ctx.db.select().from(ahspResource)
+        .where(eq(ahspResource.ahspItemId, item.id))
+        .orderBy(asc(ahspResource.category), asc(ahspResource.ordinal));
+
+      const totals = computeAhspRate(
+        resources.map(r => ({
+          category: r.category as AhspCategory,
+          koefisien: N(r.koefisien),
+          hsd: N(r.hsd),
+        })),
+        N(item.ohpPct),
+      );
+
+      const grandTotal = totals.unitRate;
+      const contributors = resources
+        .map(r => {
+          const subtotal = N(r.koefisien) * N(r.hsd);
+          return {
+            category: r.category as AhspCategory,
+            kode: r.resourceCode,
+            uraian: r.uraian,
+            subtotal,
+            pctOfTotal: grandTotal > 0 ? (subtotal / grandTotal) * 100 : 0,
+          };
+        })
+        .sort((a, b) => b.subtotal - a.subtotal)
+        .slice(0, 10);
+
+      return {
+        tenagaTotal:    totals.totalTenaga,
+        bahanTotal:     totals.totalBahan,
+        peralatanTotal: totals.totalPeralatan,
+        ohpAmount:      totals.ohpAmt,
+        grandTotal,
+        perCategory: {
+          tenaga:    totals.totalTenaga,
+          bahan:     totals.totalBahan,
+          peralatan: totals.totalPeralatan,
+        },
+        topContributors: contributors,
+      };
+    }),
+
+  /**
+   * Productivity-based estimator for an AHSP item over a planned BOQ volume.
+   *   - unitRate     : computed AHSP unit rate
+   *   - totalCost    : unitRate × plannedVolume
+   *   - productivityPerHour / PerDay: looked up from ahsp_input or ahsp_koefisien rows
+   *       whose `kode` (or `variable`) contains "Q1" / "Q2" (per-hour) or "Qt" (per-day).
+   *       If only Qt is found, perHour = Qt / 7 (assumes 7-hour effective workday).
+   *       If only Q1 is found, perDay  = Q1 × 7.
+   *   - estimatedHours / estimatedDays
+   *   - requiredResources: per ahsp_resource row, totalQty = koefisien × plannedVolume
+   */
+  productivityEstimate: orgProcedure
+    .input(z.object({
+      ahspItemId: z.string().uuid(),
+      plannedVolume: z.number().positive(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const [item] = await ctx.db.select().from(ahspItem)
+        .where(and(
+          eq(ahspItem.id, input.ahspItemId),
+          or(isNull(ahspItem.organizationId), eq(ahspItem.organizationId, ctx.session.organizationId)),
+        ))
+        .limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const [resources, inputs, koef] = await Promise.all([
+        ctx.db.select().from(ahspResource)
+          .where(eq(ahspResource.ahspItemId, item.id))
+          .orderBy(asc(ahspResource.category), asc(ahspResource.ordinal)),
+        ctx.db.select().from(ahspInput).where(eq(ahspInput.ahspItemId, item.id)),
+        ctx.db.select().from(ahspKoefisien).where(eq(ahspKoefisien.ahspItemId, item.id)),
+      ]);
+
+      const ohpPct = N(item.ohpPct);
+      const totals = computeAhspRate(
+        resources.map(r => ({
+          category: r.category as AhspCategory,
+          koefisien: N(r.koefisien),
+          hsd: N(r.hsd),
+        })),
+        ohpPct,
+      );
+      const unitRate = totals.unitRate;
+      const totalCost = unitRate * input.plannedVolume;
+
+      // Scan inputs + koefisien for productivity values
+      type ProdRow = { kode: string; variable: string | null; nilai: number | null };
+      const pool: ProdRow[] = [
+        ...inputs.map(i => ({ kode: i.kode, variable: i.variable, nilai: i.nilai === null ? null : N(i.nilai) })),
+        ...koef.map(k => ({ kode: k.kode, variable: k.variable, nilai: k.nilai === null ? null : N(k.nilai) })),
+      ];
+      const findBy = (re: RegExp): number | null => {
+        for (const p of pool) {
+          if (p.nilai === null || p.nilai === undefined || !isFinite(p.nilai) || p.nilai <= 0) continue;
+          if (re.test(p.kode) || (p.variable && re.test(p.variable))) return p.nilai;
+        }
+        return null;
+      };
+      const q1 = findBy(/\bQ1\b/i);
+      const q2 = findBy(/\bQ2\b/i);
+      const qt = findBy(/\bQt\b/i);
+
+      // Use the strongest signal available
+      const perHour = q1 ?? q2 ?? (qt !== null ? qt / 7 : null);
+      const perDay = qt ?? (perHour !== null ? perHour * 7 : null);
+
+      const estimatedHours = perHour && perHour > 0 ? input.plannedVolume / perHour : null;
+      const estimatedDays  = perDay  && perDay  > 0 ? input.plannedVolume / perDay  : null;
+
+      const requiredResources = resources.map(r => ({
+        kode: r.resourceCode,
+        category: r.category as AhspCategory,
+        uraian: r.uraian,
+        totalQty: N(r.koefisien) * input.plannedVolume,
+        satuan: r.satuan,
+      }));
+
+      return {
+        item: {
+          id: item.id,
+          kode: item.kode,
+          jenis: item.jenis,
+          satuan: item.satuan,
+        },
+        unitRate,
+        totalCost,
+        productivityPerHour: perHour,
+        productivityPerDay: perDay,
+        estimatedHours,
+        estimatedDays,
+        requiredResources,
+      };
+    }),
 });
