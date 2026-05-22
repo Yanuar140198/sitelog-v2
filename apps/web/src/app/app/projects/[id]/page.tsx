@@ -4,7 +4,7 @@ import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, X, FileSearch, Download, History, Truck, FileStack, Users, Upload, BarChart3, Zap, ShieldAlert, Package } from 'lucide-react';
+import { Search, X, FileSearch, Download, History, Truck, FileStack, Users, Upload, BarChart3, Zap, ShieldAlert, Package, HardHat } from 'lucide-react';
 import Link from 'next/link';
 import { AhspDetailDrawer } from '@/components/boq/ahsp-detail-drawer';
 import { BoqVersionPanel } from '@/components/boq/boq-version-panel';
@@ -113,6 +113,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
             </Link>
             <Link href={`/app/projects/${id}/hse`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="HSE Incident Log">
               <ShieldAlert size={14} />
+            </Link>
+            <Link href={`/app/projects/${id}/crew`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="Crew Assignments">
+              <HardHat size={14} />
             </Link>
             <button onClick={() => setShowTemplates(true)} className="p-2 hover:bg-white border border-[var(--color-ink)]" title="Templates">
               <FileStack size={14} />
