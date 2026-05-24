@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fmtIDR } from '@/lib/utils';
-import { Plus, X, Copy, Eye, Pencil, Download, LayoutGrid, Table as TableIcon, Star, Archive, Loader2 } from 'lucide-react';
+import { Plus, X, Copy, Eye, Pencil, Download, LayoutGrid, Table as TableIcon, Star, Archive, Loader2, PencilLine } from 'lucide-react';
+import { QuickEditDrawer } from '@/components/ahsp/quick-edit-drawer';
 
 type SortKey = 'kode-asc' | 'jenis-asc' | 'rate-desc' | 'used-desc';
 type ViewMode = 'table' | 'grid';
@@ -290,6 +291,7 @@ export default function AhspCatalogPage() {
   }, [pageItems, activeRowIdx, editingId, selected.size]);
 
   const [show, setShow] = useState(false);
+  const [drawerId, setDrawerId] = useState<string | null>(null);
   const [form, setForm] = useState({ kode: '', label: '', section: '', jenis: '', satuan: '', ohpPct: 0 });
   function reset() { setForm({ kode: '', label: '', section: '', jenis: '', satuan: '', ohpPct: 0 }); }
   function set<K extends keyof typeof form>(k: K, v: any) { setForm(p => ({ ...p, [k]: v })); }
@@ -629,6 +631,11 @@ export default function AhspCatalogPage() {
                     )}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1 justify-end">
+                        <button
+                          onClick={e => { e.stopPropagation(); setDrawerId(it.id); }}
+                          title="Quick edit (drawer)"
+                          className="p-1 hover:bg-[var(--color-brand)] hover:text-white"
+                        ><PencilLine size={12} /></button>
                         <Link href={`/app/ahsp/${it.id}` as any} title="View">
                           <button className="p-1 hover:bg-neutral-200"><Eye size={12} /></button>
                         </Link>
@@ -711,6 +718,11 @@ export default function AhspCatalogPage() {
                     <Button className="w-full"><Eye size={12} /> VIEW</Button>
                   </Link>
                   <button
+                    onClick={() => setDrawerId(it.id)}
+                    title="Quick edit (drawer)"
+                    className="p-2 border border-neutral-300 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand)] hover:text-white"
+                  ><PencilLine size={12} /></button>
+                  <button
                     onClick={() => handleClone(it)}
                     disabled={clone.isPending}
                     title="Clone"
@@ -739,6 +751,9 @@ export default function AhspCatalogPage() {
           >NEXT ›</button>
         </div>
       )}
+
+      {/* QUICK EDIT DRAWER */}
+      <QuickEditDrawer ahspItemId={drawerId} onClose={() => setDrawerId(null)} />
 
       {/* CREATE MODAL */}
       {show && (
