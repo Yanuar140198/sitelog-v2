@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@sitelog/api-client/react';
@@ -32,7 +32,7 @@ type Row = {
 const VALID_SORTS: SortKey[] = ['kode-asc', 'jenis-asc', 'rate-desc', 'used-desc'];
 const VALID_VIEWS: ViewMode[] = ['table', 'grid'];
 
-export default function AhspCatalogPage() {
+function AhspCatalogInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -779,5 +779,13 @@ export default function AhspCatalogPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AhspCatalogPage() {
+  return (
+    <Suspense fallback={<div className="p-8 font-mono text-xs">Loading…</div>}>
+      <AhspCatalogInner />
+    </Suspense>
   );
 }
