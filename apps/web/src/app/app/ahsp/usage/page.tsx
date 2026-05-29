@@ -11,7 +11,6 @@ export default function AhspUsageStatsPage() {
 
   const neverUsedList = useMemo(() => {
     if (!stats.data || !catalog.data) return [];
-    const usedIds = new Set(stats.data.topUsed.map(t => t.id));
     // Compute from catalog: items not in topUsed AND usedInProjects=0 from stats summary aren't directly
     // available, so derive: catalog items minus those with any usage. Use stats.topUsed only filters TOP
     // — instead reconstruct by checking which catalog items appear with 0 usage. We don't have per-item

@@ -1,7 +1,7 @@
 'use client';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { trpc } from '@sitelog/api-client/react';
 import { Input } from '@/components/ui/input';
 import { fmtIDR, fmtNum } from '@/lib/utils';
@@ -10,7 +10,6 @@ import { ArrowLeft, Search, X, ExternalLink } from 'lucide-react';
 type Cat = 'tenaga' | 'bahan' | 'peralatan';
 
 function ByResourceInner() {
-  const router = useRouter();
   const params = useSearchParams();
 
   const initialCode = params.get('resourceCode') ?? '';

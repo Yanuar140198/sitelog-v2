@@ -133,7 +133,7 @@ export const subcontractorRouter = router({
       // if any project still references this subcontractor. Surface a friendly error.
       try {
         await ctx.db.delete(subcontractor).where(eq(subcontractor.id, input.id));
-      } catch (e: any) {
+      } catch {
         throw new TRPCError({
           code: 'CONFLICT',
           message: 'Subcontractor is referenced by one or more contracts; remove those first.',

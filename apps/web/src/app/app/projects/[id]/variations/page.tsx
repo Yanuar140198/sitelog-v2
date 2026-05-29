@@ -30,7 +30,6 @@ const STATUSES = [
 ] as const;
 
 type VoType = typeof VO_TYPES[number]['key'];
-type VoStatus = typeof STATUSES[number]['key'];
 
 function typeBadge(t: string) {
   const m = VO_TYPES.find(x => x.key === t);

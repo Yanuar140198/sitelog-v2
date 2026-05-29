@@ -206,7 +206,7 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   if (!breakdown.data || !detail.data) {
     return <div className="p-8 font-mono text-sm">Loading...</div>;
   }
-  const { item, sections, totals, inputs } = breakdown.data;
+  const { item, sections, totals } = breakdown.data;
   const { resources, koefisien, inputs: rawInputs, item: rawItem } = detail.data;
   const isEditable = Boolean(rawItem.organizationId);
 

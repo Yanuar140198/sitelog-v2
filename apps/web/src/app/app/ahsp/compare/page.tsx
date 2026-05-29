@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { trpc } from '@sitelog/api-client/react';
 import { Input } from '@/components/ui/input';
 import { fmtIDR } from '@/lib/utils';
@@ -15,7 +15,6 @@ const SECTIONS: Array<{ key: Cat; letter: string; title: string }> = [
 ];
 
 function CompareInner() {
-  const router = useRouter();
   const params = useSearchParams();
   const initialIds = useMemo(() => {
     const raw = params.get('ids') ?? '';
