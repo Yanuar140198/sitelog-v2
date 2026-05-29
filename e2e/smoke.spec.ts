@@ -84,7 +84,6 @@ test.describe('Navigation', () => {
     ['Fleet', '/app/fleet'],
     ['Daily Entries', '/app/entries'],
     ['Analytics', '/app/analytics'],
-    ['AI Assistant', '/app/ai'],
     ['Audit Log', '/app/audit'],
     ['Settings', '/app/settings'],
   ] as const) {

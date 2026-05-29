@@ -23,3 +23,5 @@ scripts/seed_*.py
 test-results/
 playwright-report/
 backups/
+e2e/.api-key
+.claude/
