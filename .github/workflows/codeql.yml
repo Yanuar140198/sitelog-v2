@@ -29,6 +29,10 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
+      # Uploading results needs GitHub code scanning enabled (Advanced Security on
+      # private repos). Don't fail the PR when it isn't — the scan still runs and
+      # will start reporting once code scanning is enabled / the repo is public.
       - uses: github/codeql-action/analyze@v3
+        continue-on-error: true
         with:
           category: /language:${{ matrix.language }}
