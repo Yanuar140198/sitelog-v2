@@ -4,6 +4,7 @@ import { router, orgProcedure, requireRole } from '../trpc.js';
 import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, ahspPin, resourceMaster, user } from '@sitelog/db';
 import { TRPCError } from '@trpc/server';
 import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
+import { estimateProductivity } from '../lib/productivity.js';
 
 const N = (v: unknown) => Number(v ?? 0);
 
@@ -2094,29 +2095,12 @@ export const ahspRouter = router({
       const unitRate = totals.unitRate;
       const totalCost = unitRate * input.plannedVolume;
 
-      // Scan inputs + koefisien for productivity values
-      type ProdRow = { kode: string; variable: string | null; nilai: number | null };
-      const pool: ProdRow[] = [
+      // Scan inputs + koefisien for productivity signals (Q1/Q2/Qt).
+      const pool = [
         ...inputs.map(i => ({ kode: i.kode, variable: i.variable, nilai: i.nilai === null ? null : N(i.nilai) })),
         ...koef.map(k => ({ kode: k.kode, variable: k.variable, nilai: k.nilai === null ? null : N(k.nilai) })),
       ];
-      const findBy = (re: RegExp): number | null => {
-        for (const p of pool) {
-          if (p.nilai === null || p.nilai === undefined || !isFinite(p.nilai) || p.nilai <= 0) continue;
-          if (re.test(p.kode) || (p.variable && re.test(p.variable))) return p.nilai;
-        }
-        return null;
-      };
-      const q1 = findBy(/\bQ1\b/i);
-      const q2 = findBy(/\bQ2\b/i);
-      const qt = findBy(/\bQt\b/i);
-
-      // Use the strongest signal available
-      const perHour = q1 ?? q2 ?? (qt !== null ? qt / 7 : null);
-      const perDay = qt ?? (perHour !== null ? perHour * 7 : null);
-
-      const estimatedHours = perHour && perHour > 0 ? input.plannedVolume / perHour : null;
-      const estimatedDays  = perDay  && perDay  > 0 ? input.plannedVolume / perDay  : null;
+      const { perHour, perDay, estimatedHours, estimatedDays } = estimateProductivity(pool, input.plannedVolume);
 
       const requiredResources = resources.map(r => ({
         kode: r.resourceCode,
