@@ -25,8 +25,8 @@ const WEB = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:dev@localhost:5434/sitelog';
 const EMAIL = process.env.E2E_EMAIL ?? 'demo@sitelog.local';
 const PASSWORD = process.env.E2E_PASSWORD ?? 'demopass123';
-const ORG_NAME = 'E2E Demo Org';
-const ORG_SLUG = 'e2e-demo';
+const ORG_NAME = 'Demo Construction';
+const ORG_SLUG = 'demo-construction';
 
 const KEY_FILE = join(dirname(fileURLToPath(import.meta.url)), '.api-key');
 

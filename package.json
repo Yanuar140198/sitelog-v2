@@ -19,7 +19,7 @@
     "test:e2e:install": "playwright install --with-deps chromium",
     "db:generate": "pnpm --filter @sitelog/db generate",
     "db:migrate": "pnpm --filter @sitelog/db migrate",
-    "db:apply": "bun packages/db/src/migrate-sql.ts",
+    "db:apply": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f packages/db/schema.sql && psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f packages/db/seed.sql",
     "db:studio": "pnpm --filter @sitelog/db studio",
     "web:dev": "pnpm --filter @sitelog/web dev",
     "api:dev": "pnpm --filter @sitelog/api dev",
