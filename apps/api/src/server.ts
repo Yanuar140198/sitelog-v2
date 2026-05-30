@@ -47,8 +47,13 @@ app.use('*', async (c, next) => {
   else if (path.startsWith('/api/v1/')) bump('rest_calls_total');
 });
 
+// Reflect credentials only for explicitly-trusted origins. Echoing an arbitrary
+// Origin together with credentials:true lets any site make authenticated
+// cross-origin requests with the victim's cookies (CSRF / credential theft).
+const allowedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? 'http://localhost:3000,http://localhost:4000')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 app.use('*', cors({
-  origin: (origin) => origin ?? 'http://localhost:3000',
+  origin: (origin) => (origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0]),
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Org-Id', 'Cookie'],

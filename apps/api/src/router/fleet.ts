@@ -1,8 +1,25 @@
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 import { router, orgProcedure, requireRole } from '../trpc.js';
-import { unit, projectFleetAssignment } from '@sitelog/db';
+import { unit, project, projectFleetAssignment } from '@sitelog/db';
 import { audit } from '../lib/audit.js';
+
+/** Throw NOT_FOUND unless the project belongs to the caller's org (tenant isolation). */
+async function assertProjectInOrg(ctx: any, projectId: string) {
+  const [p] = await ctx.db.select({ id: project.id }).from(project)
+    .where(and(eq(project.id, projectId), eq(project.organizationId, ctx.session.organizationId)))
+    .limit(1);
+  if (!p) throw new TRPCError({ code: 'NOT_FOUND' });
+}
+
+/** Throw NOT_FOUND unless the unit belongs to the caller's org (tenant isolation). */
+async function assertUnitInOrg(ctx: any, unitId: string) {
+  const [u] = await ctx.db.select({ id: unit.id }).from(unit)
+    .where(and(eq(unit.id, unitId), eq(unit.organizationId, ctx.session.organizationId)))
+    .limit(1);
+  if (!u) throw new TRPCError({ code: 'NOT_FOUND' });
+}
 
 const unitInput = z.object({
   nomor: z.string().min(1).max(64),
@@ -58,6 +75,7 @@ export const fleetRouter = router({
   assignments: orgProcedure
     .input(z.object({ projectId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      await assertProjectInOrg(ctx, input.projectId);
       return ctx.db.query.projectFleetAssignment.findMany({
         where: eq(projectFleetAssignment.projectId, input.projectId),
         with: { },
@@ -72,6 +90,8 @@ export const fleetRouter = router({
       note: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      await assertProjectInOrg(ctx, input.projectId);
+      await assertUnitInOrg(ctx, input.unitId);
       const existing = await ctx.db.select().from(projectFleetAssignment)
         .where(and(eq(projectFleetAssignment.projectId, input.projectId), eq(projectFleetAssignment.unitId, input.unitId)))
         .limit(1);
@@ -92,6 +112,7 @@ export const fleetRouter = router({
   unassign: requireRole('owner', 'admin', 'scheduler', 'estimator')
     .input(z.object({ projectId: z.string().uuid(), unitId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      await assertProjectInOrg(ctx, input.projectId);
       await ctx.db.update(projectFleetAssignment).set({ unassignedAt: new Date() })
         .where(and(
           eq(projectFleetAssignment.projectId, input.projectId),

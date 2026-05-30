@@ -423,6 +423,12 @@ export const ahspRouter = router({
         hsd: String(input.hsd),
       };
       if (input.id) {
+        // Ensure the targeted resource row also belongs to an org-owned item
+        // (input.ahspItemId being org-owned isn't enough — input.id could point elsewhere).
+        const [res] = await ctx.db.select({ ahspItemId: ahspResource.ahspItemId }).from(ahspResource)
+          .where(eq(ahspResource.id, input.id)).limit(1);
+        if (!res) throw new TRPCError({ code: 'NOT_FOUND' });
+        await assertEditable(ctx.db, res.ahspItemId, ctx.session.organizationId);
         const [row] = await ctx.db.update(ahspResource).set(values).where(eq(ahspResource.id, input.id)).returning();
         return row;
       }
@@ -433,6 +439,11 @@ export const ahspRouter = router({
   resourceDelete: requireRole('owner', 'admin', 'estimator')
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify the resource's parent item is org-owned before deleting (tenant isolation).
+      const [res] = await ctx.db.select({ ahspItemId: ahspResource.ahspItemId }).from(ahspResource)
+        .where(eq(ahspResource.id, input.id)).limit(1);
+      if (!res) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, res.ahspItemId, ctx.session.organizationId);
       await ctx.db.delete(ahspResource).where(eq(ahspResource.id, input.id));
       return { ok: true };
     }),
