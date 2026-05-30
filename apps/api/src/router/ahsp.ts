@@ -1588,7 +1588,7 @@ export const ahspRouter = router({
         const projRes = await tx.execute(sql`
           SELECT COUNT(DISTINCT bi.project_id)::int AS n
           FROM boq_item bi
-          WHERE bi.ahsp_item_id IN ${sql.raw(`('${input.removeIds.join("','")}')`)}
+          WHERE bi.ahsp_item_id IN (${sql.join(input.removeIds.map((id) => sql`${id}`), sql`, `)})
         `);
         const projRow = ((projRes as any).rows ?? projRes)[0];
         projectsAffected = Number(projRow?.n ?? 0);
@@ -1712,7 +1712,7 @@ export const ahspRouter = router({
           const projRes = await tx.execute(sql`
             SELECT COUNT(DISTINCT bi.project_id)::int AS n
             FROM boq_item bi
-            WHERE bi.ahsp_item_id IN ${sql.raw(`('${removeIds.join("','")}')`)}
+            WHERE bi.ahsp_item_id IN (${sql.join(removeIds.map((id) => sql`${id}`), sql`, `)})
           `);
           const projRow = ((projRes as any).rows ?? projRes)[0];
           projectsAffected += Number(projRow?.n ?? 0);

@@ -6,6 +6,7 @@
  * Super-admins can still call any endpoint (override via X-Maintenance-Bypass header + ADMIN secret).
  */
 import type { MiddlewareHandler } from 'hono';
+import { safeEqual } from './safe-compare.js';
 
 const EXEMPT_PATHS = new Set(['/healthz', '/status', '/metrics']);
 
@@ -17,7 +18,7 @@ export function maintenanceModeMiddleware(): MiddlewareHandler {
 
     // Admin bypass — must know shared secret
     const bypass = c.req.header('x-maintenance-bypass');
-    if (bypass && process.env.MAINTENANCE_BYPASS_SECRET && bypass === process.env.MAINTENANCE_BYPASS_SECRET) {
+    if (bypass && process.env.MAINTENANCE_BYPASS_SECRET && safeEqual(bypass, process.env.MAINTENANCE_BYPASS_SECRET)) {
       return next();
     }
 

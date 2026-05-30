@@ -15,6 +15,7 @@ import { appRouter } from './router/index.js';
 import { createContext } from './context.js';
 import { resolveAuthSession, auth } from '@sitelog/auth';
 import { stripe } from './lib/stripe.js';
+import { safeEqual } from './lib/safe-compare.js';
 import { db, subscription, organization } from '@sitelog/db';
 import { eq, sql } from 'drizzle-orm';
 
@@ -113,7 +114,7 @@ app.get('/metrics', async (c) => {
   const token = process.env.METRICS_TOKEN;
   if (token) {
     const auth = c.req.header('authorization');
-    if (auth !== `Bearer ${token}`) return c.text('Unauthorized', 401);
+    if (!auth || !safeEqual(auth, `Bearer ${token}`)) return c.text('Unauthorized', 401);
   }
   const { renderMetrics } = await import('./metrics.js');
   const body = await renderMetrics();
@@ -161,7 +162,7 @@ app.get('/status', async (c) => {
 /** Idempotency-key prune cron — every hour, removes keys older than 24h. */
 app.post('/api/cron/prune-idempotency', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const r: any = await db.execute(sql`
@@ -175,7 +176,7 @@ app.post('/api/cron/prune-idempotency', async (c) => {
  *  Guard with CRON_SECRET header. */
 app.post('/api/cron/meters-report', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const { reportAllOrgMeters } = await import('./lib/meters.js');
@@ -186,7 +187,7 @@ app.post('/api/cron/meters-report', async (c) => {
 /** Audit retention cron — call daily. Prunes audit > 365 days, webhook_delivery > 30 days. */
 app.post('/api/cron/prune-audit', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const { pruneAuditLog } = await import('./lib/retention.js');
@@ -198,7 +199,7 @@ app.post('/api/cron/prune-audit', async (c) => {
 /** Webhook delivery retry cron — call every 5min via scheduler. */
 app.post('/api/cron/webhook-retry', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const { retryFailedDeliveries } = await import('./lib/webhook-retry.js');
