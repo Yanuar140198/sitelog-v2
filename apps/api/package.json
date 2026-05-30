@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "bun --watch src/server.ts",
     "build": "bun build src/server.ts --target=bun --outdir=dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@sitelog/db": "workspace:*",
