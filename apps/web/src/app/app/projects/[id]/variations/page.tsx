@@ -87,7 +87,7 @@ export default function VariationsPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="min-h-[calc(100vh-56px)] bg-neutral-50">
       {/* Header */}
-      <header className="bg-white border-b-2 border-[var(--color-ink)] px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b-2 border-[var(--color-ink)] px-4 md:px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <Link href={`/app/projects/${id}`} className="p-2 border border-[var(--color-ink)] hover:bg-neutral-100">
             <ArrowLeft size={14} />
@@ -110,7 +110,7 @@ export default function VariationsPage({ params }: { params: Promise<{ id: strin
       </header>
 
       {/* KPI cards */}
-      <section className="px-6 py-6 grid grid-cols-4 gap-4">
+      <section className="px-4 md:px-6 py-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi label="TOTAL APPROVED COST" big={fmtIDR(summary?.data?.totalApprovedCost ?? 0)}
              tone={(summary?.data?.totalApprovedCost ?? 0) < 0 ? 'text-red-600' : 'text-[var(--color-ink)]'} sub="approved + implemented + invoiced" />
         <Kpi label="TIME EXTENSION DAYS" big={`${summary?.data?.totalApprovedDays ?? 0}d`}
@@ -122,7 +122,7 @@ export default function VariationsPage({ params }: { params: Promise<{ id: strin
       </section>
 
       {/* Status breakdown */}
-      <section className="px-6 pb-4">
+      <section className="px-4 md:px-6 pb-4">
         <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold mb-2">STATUS BREAKDOWN</div>
         <div className="flex flex-wrap gap-2">
           {STATUSES.map(s => {
@@ -138,8 +138,8 @@ export default function VariationsPage({ params }: { params: Promise<{ id: strin
       </section>
 
       {/* Table */}
-      <section className="px-6 pb-10">
-        <div className="bg-white border-2 border-[var(--color-ink)]">
+      <section className="px-4 md:px-6 pb-10">
+        <div className="bg-white border-2 border-[var(--color-ink)] overflow-x-auto">
           {!rows.length ? (
             <div className="p-16 text-center">
               <FileEdit size={48} className="mx-auto text-[var(--color-brand)]" />
@@ -149,7 +149,7 @@ export default function VariationsPage({ params }: { params: Promise<{ id: strin
               </p>
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[900px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-[100px]">VO #</th>
@@ -260,7 +260,7 @@ function NewVoModal({ projectId, suggestedNumber, onClose, onSubmit, pending, er
           <button onClick={onClose}><X size={16} /></button>
         </div>
         <div className="p-5 space-y-3 font-mono text-xs">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="VO #">
               <input value={form.voNumber} onChange={e => setForm({ ...form, voNumber: e.target.value })}
                      className="w-full border border-[var(--color-ink)] px-2 py-1 font-bold" />
@@ -286,7 +286,7 @@ function NewVoModal({ projectId, suggestedNumber, onClose, onSubmit, pending, er
                       rows={2} placeholder="why is this change needed?"
                       className="w-full border border-[var(--color-ink)] px-2 py-1" />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="COST IMPACT (IDR, negative = credit)">
               <input type="number" value={form.costImpact} onChange={e => setForm({ ...form, costImpact: e.target.value })}
                      placeholder="0" className="w-full border border-[var(--color-ink)] px-2 py-1" />
@@ -296,7 +296,7 @@ function NewVoModal({ projectId, suggestedNumber, onClose, onSubmit, pending, er
                      placeholder="0" className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="REQUESTED BY (client rep)">
               <input value={form.requestedBy} onChange={e => setForm({ ...form, requestedBy: e.target.value })}
                      placeholder="e.g. Ir. Hadi (PPK)"

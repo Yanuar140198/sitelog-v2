@@ -16,11 +16,11 @@ export default function BoqEditorPage() {
   const projects = trpc.project.list.useQuery();
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">ESTIMATE</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">BOQ Editor</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">BOQ Editor</h1>
           <p className="text-sm text-neutral-500 mt-1">Pilih proyek untuk menyusun Bill of Quantities-nya.</p>
         </div>
         <Link href="/app/projects/new" className="inline-flex items-center gap-2 border-2 border-[var(--color-ink)] px-4 py-2 font-mono text-sm hover:bg-[var(--color-ink)] hover:text-white transition-colors">

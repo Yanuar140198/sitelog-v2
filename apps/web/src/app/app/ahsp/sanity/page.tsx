@@ -94,15 +94,15 @@ export default function AhspSanityCheckPage() {
   if (!issues.data) return <div className="p-8 font-mono text-xs">Loading…</div>;
 
   return (
-    <div className="p-8 max-w-6xl space-y-6">
+    <div className="p-4 md:p-8 max-w-6xl space-y-6">
       <Link href="/app/ahsp" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
         <ArrowLeft size={14} /> AHSP CATALOG
       </Link>
 
-      <div className="flex items-end justify-between">
+      <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">TOOLS · SANITY CHECK</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">AHSP Quality Check</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">AHSP Quality Check</h1>
           <p className="font-mono text-xs text-neutral-500 mt-2">
             {counts.all} total issue{counts.all === 1 ? '' : 's'}
             {' · '}
@@ -198,7 +198,8 @@ export default function AhspSanityCheckPage() {
               </span>
             </button>
             {!isCollapsed && (
-              <table className="w-full font-mono text-xs">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] font-mono text-xs">
                 <thead className="bg-neutral-100 text-neutral-700">
                   <tr>
                     <th className="text-left px-3 py-2 tracking-wider w-32">KODE</th>
@@ -229,6 +230,7 @@ export default function AhspSanityCheckPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         );

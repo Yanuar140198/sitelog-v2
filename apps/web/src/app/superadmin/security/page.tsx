@@ -20,7 +20,7 @@ export default function SuperAdminSecurity() {
     <div className="space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">SECURITY</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Failed Logins</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Failed Logins</h1>
         <p className="font-mono text-xs text-white/60 mt-2">Monitor brute-force + credential-stuffing attempts.</p>
       </div>
 
@@ -46,7 +46,8 @@ export default function SuperAdminSecurity() {
 
       <section className="border-2 border-white/30 bg-black/50 p-4">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">RECENT FAILURES ({list.data?.length ?? 0})</h2>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[640px]">
           <thead className="text-white/50"><tr>
             <th className="text-left py-1">TIME</th>
             <th className="text-left">EMAIL</th>
@@ -69,6 +70,7 @@ export default function SuperAdminSecurity() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );

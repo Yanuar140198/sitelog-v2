@@ -11,13 +11,13 @@ export default function AnalyticsPage() {
   const avgSpi = rows.length ? rows.reduce((a, p) => a + p.spi, 0) / rows.length : 0;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">INSIGHTS</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Analytics</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Analytics</h1>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Kpi label="TOTAL PLANNED VALUE" value={fmtIDR(totalPlan)} />
         <Kpi label="EARNED VALUE" value={fmtIDR(totalEarned)} />
         <Kpi label="AVG SPI" value={avgSpi ? avgSpi.toFixed(2) : '—'} highlight={avgSpi >= 1} />

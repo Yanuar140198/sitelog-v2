@@ -34,7 +34,7 @@ export default function SettingsGeneral() {
       </Section>
 
       <Section title="BRANDING">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Brand Color">
             <div className="flex gap-2 items-center">
               <input type="color" value={form.brandColor ?? '#FF5500'} onChange={e => set('brandColor', e.target.value)} className="w-12 h-10 border-2 border-[var(--color-ink)]" />
@@ -54,7 +54,7 @@ export default function SettingsGeneral() {
       </Section>
 
       <Section title="LOCALIZATION">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Currency"><Input value={form.currency ?? ''} onChange={e => set('currency', e.target.value)} /></Field>
           <Field label="Locale"><Input value={form.locale ?? ''} onChange={e => set('locale', e.target.value)} /></Field>
           <Field label="Timezone"><Input value={form.timezone ?? ''} onChange={e => set('timezone', e.target.value)} /></Field>

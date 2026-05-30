@@ -90,14 +90,14 @@ function ByResourceInner() {
     : 'text-neutral-500';
 
   return (
-    <div className="p-8 max-w-7xl space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl space-y-6">
       <Link href="/app/ahsp" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
         <ArrowLeft size={14} /> AHSP CATALOG
       </Link>
 
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">TOOLS · BY RESOURCE</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">AHSP by Resource</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">AHSP by Resource</h1>
         <p className="font-mono text-xs text-neutral-500 mt-2">Find AHSP using a specific resource — handy when a price changes.</p>
       </div>
 
@@ -182,8 +182,8 @@ function ByResourceInner() {
               No AHSP currently references this resource.
             </div>
           ) : (
-            <div className="overflow-auto">
-              <table className="w-full font-mono text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] font-mono text-xs">
                 <thead className="bg-neutral-100 border-b-2 border-[var(--color-ink)]">
                   <tr>
                     <th className="text-left px-3 py-2 tracking-wider">KODE</th>

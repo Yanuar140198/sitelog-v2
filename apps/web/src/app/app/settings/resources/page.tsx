@@ -50,7 +50,7 @@ export default function ResourcesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end gap-4">
+      <div className="flex flex-wrap justify-between items-end gap-4">
         <p className="font-mono text-xs text-neutral-600 max-w-2xl">
           Centralized HSD library. AHSP rates lookup unit prices from here — update solar price once, all AHSP recompute.
           Regional tiers override default HSD per region.
@@ -58,7 +58,7 @@ export default function ResourcesPage() {
         <Button variant="primary" onClick={() => setShowAdd(true)}><Plus size={14} /> NEW RESOURCE</Button>
       </div>
 
-      <div className="flex gap-2 border-b-2 border-[var(--color-ink)]">
+      <div className="flex gap-2 border-b-2 border-[var(--color-ink)] overflow-x-auto whitespace-nowrap">
         {CATEGORIES.map(c => (
           <button key={c.value} onClick={() => setCategory(c.value)}
             className={`px-4 py-2 font-mono text-xs tracking-wider border-b-4 ${
@@ -91,7 +91,8 @@ export default function ResourcesPage() {
         )}
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">KODE</th>
@@ -148,6 +149,7 @@ export default function ResourcesPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {(showAdd || editing) && (
         <ResourceModal
@@ -185,9 +187,9 @@ function ResourceModal({ initial, onClose, onSubmit, pending }: {
   const [hsd, setHsd] = useState<string>(initial?.defaultHsd ?? '0');
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-md w-full shadow-[8px_8px_0_var(--color-brand)]">
+      <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
         <div className="flex items-center gap-2 mb-4">
           <Package size={20} className="text-[var(--color-brand)]" />
           <h2 className="font-display text-2xl font-bold">{initial ? 'Edit' : 'New'} Resource</h2>
@@ -196,7 +198,7 @@ function ResourceModal({ initial, onClose, onSubmit, pending }: {
           e.preventDefault();
           onSubmit({ kode, nama, category: cat, satuan, defaultHsd: Number(hsd) });
         }} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Kode *</Label>
               <Input required value={kode} onChange={e => setKode(e.target.value)} placeholder="L01" />
@@ -213,7 +215,7 @@ function ResourceModal({ initial, onClose, onSubmit, pending }: {
             <Label>Nama *</Label>
             <Input required value={nama} onChange={e => setNama(e.target.value)} placeholder="Pekerja Harian" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Satuan *</Label>
               <Input required value={satuan} onChange={e => setSatuan(e.target.value)} placeholder="hari, ltr, jam" />
@@ -251,9 +253,9 @@ function PriceModal({ resource, onClose, onSubmit, pending }: {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-lg w-full shadow-[8px_8px_0_var(--color-brand)]">
+      <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
         <div className="flex items-center gap-2 mb-1">
           <DollarSign size={20} className="text-[var(--color-brand)]" />
           <h2 className="font-display text-2xl font-bold">Set Regional Price</h2>
@@ -266,7 +268,7 @@ function PriceModal({ resource, onClose, onSubmit, pending }: {
           if (!finalRegion) return;
           onSubmit({ region: finalRegion, hsd: Number(hsd), effectiveFrom });
         }} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Region *</Label>
               <select value={region} onChange={e => setRegion(e.target.value)}

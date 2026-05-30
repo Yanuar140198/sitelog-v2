@@ -31,8 +31,8 @@ export default function MembersPage() {
       <div className="border-2 border-[var(--color-ink)] bg-white">
         <div className="px-4 py-2 bg-[var(--color-ink)] text-white font-mono text-xs tracking-[0.2em]">INVITE MEMBER</div>
         <form onSubmit={e => { e.preventDefault(); invite.mutate({ email, role }); }}
-          className="p-5 flex gap-3 items-end">
-          <div className="flex-1"><Label>Email</Label><Input type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
+          className="p-5 flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px]"><Label>Email</Label><Input type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
           <div><Label>Role</Label>
             <select value={role} onChange={e => setRole(e.target.value as any)}
               className="px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
@@ -45,7 +45,8 @@ export default function MembersPage() {
 
       <div className="border-2 border-[var(--color-ink)] bg-white">
         <div className="px-4 py-2 bg-[var(--color-ink)] text-white font-mono text-xs tracking-[0.2em]">ACTIVE MEMBERS</div>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[560px]">
           <thead><tr className="border-b border-neutral-200">
             <th className="text-left px-4 py-2">EMAIL</th><th className="text-left px-4 py-2">NAME</th>
             <th className="text-left px-4 py-2">ROLE</th><th className="text-right px-4 py-2"></th>
@@ -67,12 +68,14 @@ export default function MembersPage() {
             </tr>
           ))}</tbody>
         </table>
+        </div>
       </div>
 
       {(invites.data ?? []).filter(i => !i.acceptedAt).length > 0 && (
         <div className="border-2 border-[var(--color-ink)] bg-white">
           <div className="px-4 py-2 bg-[var(--color-ink)] text-white font-mono text-xs tracking-[0.2em]">PENDING INVITES</div>
-          <table className="w-full font-mono text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full font-mono text-xs min-w-[560px]">
             <tbody>{invites.data?.filter(i => !i.acceptedAt).map(i => (
               <tr key={i.id} className="border-b border-neutral-100">
                 <td className="px-4 py-2">{i.email}</td>
@@ -84,6 +87,7 @@ export default function MembersPage() {
               </tr>
             ))}</tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

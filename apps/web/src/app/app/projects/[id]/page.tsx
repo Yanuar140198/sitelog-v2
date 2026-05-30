@@ -68,9 +68,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="grid grid-cols-[320px_1fr_340px] h-[calc(100vh-56px)]">
+    <div className="grid grid-cols-1 md:grid-cols-[320px_1fr_340px] md:h-[calc(100vh-56px)]">
       {/* Sidebar: AHSP catalog */}
-      <aside className="bg-white border-r-2 border-[var(--color-ink)] flex flex-col overflow-hidden">
+      <aside className="bg-white border-b-2 md:border-b-0 md:border-r-2 border-[var(--color-ink)] flex flex-col overflow-hidden max-h-[50vh] md:max-h-none">
         <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50">
           <div className="relative">
             <Search size={14} className="absolute left-2 top-2.5 text-neutral-400" />
@@ -99,15 +99,15 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
       </aside>
 
       {/* Main: BOQ table */}
-      <main className="bg-white border-r-2 border-[var(--color-ink)] flex flex-col overflow-hidden">
-        <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex items-center justify-between">
+      <main className="bg-white border-b-2 md:border-b-0 md:border-r-2 border-[var(--color-ink)] flex flex-col overflow-hidden">
+        <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="font-mono text-[10px] tracking-wider text-[var(--color-brand)] font-bold">
               {project.data?.code} · {boq.data?.items.length ?? 0} SCOPES
             </div>
             <h2 className="font-display text-lg font-bold">{project.data?.name}</h2>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             <Link href={`/app/projects/${id}/schedule`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="Schedule (S-curve + Gantt + Baseline)">
               <BarChart3 size={14} />
             </Link>
@@ -154,7 +154,7 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
               <p className="font-mono text-xs text-neutral-500 mt-2">Click any AHSP item in sidebar to add as scope.</p>
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[720px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white sticky top-0 z-10">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-[130px]">ITEM</th>

@@ -34,11 +34,11 @@ export default function CrewPage() {
   const del = trpc.crew.delete.useMutation({ onSuccess: () => utils.crew.list.invalidate() });
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-wrap gap-2 items-end justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">WORKFORCE</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Crew</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Crew</h1>
           <p className="font-mono text-xs text-neutral-500 mt-2">
             {list.data?.length ?? 0} {statusFilter.replace('_', ' ')} member{(list.data?.length ?? 0) === 1 ? '' : 's'}
           </p>
@@ -69,7 +69,8 @@ export default function CrewPage() {
         </div>
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">FULL NAME</th>
@@ -109,6 +110,7 @@ export default function CrewPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {showCreate && <CrewModal onClose={() => setShowCreate(false)} />}
       {editId && <CrewDrawer id={editId} onClose={() => setEditId(null)} />}
@@ -141,9 +143,9 @@ function CrewModal({ onClose, initial, id }: { onClose: () => void; initial?: Pa
   const pending = create.isPending || update.isPending;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-xl w-full shadow-[8px_8px_0_var(--color-brand)]">
+      <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
         <h2 className="font-display text-2xl font-bold mb-4">{isEdit ? 'Edit Crew' : 'New Crew Member'}</h2>
         <form
           onSubmit={e => {
@@ -162,8 +164,8 @@ function CrewModal({ onClose, initial, id }: { onClose: () => void; initial?: Pa
             if (isEdit && id) update.mutate({ id, ...payload, status: form.status });
             else create.mutate(payload);
           }}
-          className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><Label>Full Name *</Label><Input required value={form.fullName} onChange={e => set('fullName', e.target.value)} /></div>
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><Label>Full Name *</Label><Input required value={form.fullName} onChange={e => set('fullName', e.target.value)} /></div>
           <div><Label>Nickname</Label><Input value={form.nickname} onChange={e => set('nickname', e.target.value)} /></div>
           <div><Label>Phone</Label><Input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0812..." /></div>
           <div><Label>KTP / National ID</Label><Input value={form.nationalId} onChange={e => set('nationalId', e.target.value)} /></div>
@@ -186,8 +188,8 @@ function CrewModal({ onClose, initial, id }: { onClose: () => void; initial?: Pa
               </select>
             </div>
           )}
-          <div className="col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
-          <div className="col-span-2 flex gap-2 mt-3">
+          <div className="sm:col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
+          <div className="sm:col-span-2 flex gap-2 mt-3">
             <Button type="submit" variant="primary" disabled={pending}>{isEdit ? 'SAVE' : 'CREATE'}</Button>
             <Button type="button" onClick={onClose}>CANCEL</Button>
           </div>
@@ -269,7 +271,8 @@ function CrewDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               {detail.data.assignments.length === 0 ? (
                 <p className="font-mono text-xs text-neutral-500">No assignments yet.</p>
               ) : (
-                <table className="w-full font-mono text-[11px] bg-white border-2 border-[var(--color-ink)]">
+                <div className="overflow-x-auto">
+                <table className="w-full font-mono text-[11px] bg-white border-2 border-[var(--color-ink)] min-w-[380px]">
                   <thead className="bg-[var(--color-ink)] text-white">
                     <tr>
                       <th className="text-left px-2 py-1.5 tracking-wider">PROJECT</th>
@@ -291,6 +294,7 @@ function CrewDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>

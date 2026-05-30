@@ -15,12 +15,12 @@ export default function AiAssistantPage() {
   const configured = status.data?.configured === true;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       {/* HEADER */}
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">ASSISTANT</p>
         <div className="flex items-baseline gap-3 mt-1">
-          <h1 className="font-display text-4xl font-bold tracking-tight">AI Assistant</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight">AI Assistant</h1>
           <Sparkles size={20} className="text-[var(--color-brand)]" />
         </div>
         <p className="font-mono text-xs text-neutral-500 mt-2">

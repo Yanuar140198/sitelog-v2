@@ -5,10 +5,10 @@ import { AnnouncementBanner } from '@/components/app-shell/announcement-banner';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen grid grid-cols-[240px_1fr] grid-rows-[56px_1fr]">
+    <div className="min-h-screen grid grid-rows-[56px_1fr] md:grid-cols-[240px_1fr] overflow-x-hidden">
       <Sidebar />
       <Topbar />
-      <main className="col-start-2 row-start-2 bg-[var(--color-paper)] overflow-auto">
+      <main className="row-start-2 md:col-start-2 bg-[var(--color-paper)] overflow-auto">
         <AnnouncementBanner />
         {children}
       </main>

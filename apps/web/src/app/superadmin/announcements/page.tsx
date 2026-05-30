@@ -28,7 +28,7 @@ export default function AnnouncementsAdmin() {
     <div className="space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">PLATFORM</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Announcements</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Announcements</h1>
         <p className="font-mono text-xs text-white/60 mt-2">Broadcast a banner to every authenticated user across all orgs.</p>
       </div>
 
@@ -45,7 +45,7 @@ export default function AnnouncementsAdmin() {
             <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={2000} rows={3}
               className="bg-black border-2 border-white/30 px-3 py-2 text-white font-sans" />
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="grid gap-1">
               <span className="text-white/50">Severity</span>
               <select value={severity} onChange={e => setSeverity(e.target.value as any)}
@@ -81,7 +81,8 @@ export default function AnnouncementsAdmin() {
 
       <section className="border-2 border-white/30 bg-black/50 p-4">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">ALL ANNOUNCEMENTS ({list.data?.length ?? 0})</h2>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[560px]">
           <thead className="text-white/50">
             <tr>
               <th className="text-left py-1">TITLE</th>
@@ -106,6 +107,7 @@ export default function AnnouncementsAdmin() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );

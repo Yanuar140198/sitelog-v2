@@ -13,7 +13,7 @@ export default function SuperAdminDashboard() {
     <div className="space-y-8">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">PLATFORM</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Super Admin</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Super Admin</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

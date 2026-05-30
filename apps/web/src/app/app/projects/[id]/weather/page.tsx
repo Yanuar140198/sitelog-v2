@@ -80,7 +80,7 @@ export default function WeatherPage({ params }: { params: Promise<{ id: string }
   return (
     <div className="min-h-[calc(100vh-56px)] bg-neutral-50">
       {/* Header */}
-      <header className="bg-white border-b-2 border-[var(--color-ink)] px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b-2 border-[var(--color-ink)] px-4 md:px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <Link href={`/app/projects/${id}`} className="p-2 border border-[var(--color-ink)] hover:bg-neutral-100">
             <ArrowLeft size={14} />
@@ -102,7 +102,7 @@ export default function WeatherPage({ params }: { params: Promise<{ id: string }
       </header>
 
       {/* KPI cards — last 30 days window */}
-      <section className="px-6 py-6 grid grid-cols-4 gap-4">
+      <section className="px-4 md:px-6 py-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi label="RAINY DAYS (30d)" value={rainyDays} sub={`of ${summary.data?.totalDays ?? 0} logged`} tone={rainyDays > 10 ? 'text-blue-700' : ''} />
         <Kpi label="TOTAL RAINFALL (30d)" value={`${totalRain.toFixed(1)}`} sub="mm" />
         <Kpi label="DISRUPTED HOURS (30d)" value={`${totalDisrupted.toFixed(1)}`} sub="hours of work lost" tone={totalDisrupted > 40 ? 'text-red-600' : ''} />
@@ -110,8 +110,8 @@ export default function WeatherPage({ params }: { params: Promise<{ id: string }
       </section>
 
       {/* Table */}
-      <section className="px-6 pb-10">
-        <div className="bg-white border-2 border-[var(--color-ink)]">
+      <section className="px-4 md:px-6 pb-10">
+        <div className="bg-white border-2 border-[var(--color-ink)] overflow-x-auto">
           {!list.data?.length ? (
             <div className="p-16 text-center">
               <CloudRain size={48} className="mx-auto text-[var(--color-brand)]" />
@@ -119,7 +119,7 @@ export default function WeatherPage({ params }: { params: Promise<{ id: string }
               <p className="font-mono text-xs text-neutral-500 mt-2">Hit + LOG TODAY each morning to keep audit-grade evidence for rain-delay claims.</p>
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[860px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-[110px]">DATE</th>
@@ -197,7 +197,7 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string | numbe
   return (
     <div className="bg-white border-2 border-[var(--color-ink)] p-5">
       <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">{label}</div>
-      <div className={`font-display text-5xl font-bold mt-2 ${tone ?? ''}`}>{value}</div>
+      <div className={`font-display text-4xl md:text-5xl font-bold mt-2 ${tone ?? ''}`}>{value}</div>
       {sub && <div className="font-mono text-[10px] text-neutral-500 mt-1">{sub}</div>}
     </div>
   );
@@ -256,7 +256,7 @@ function WeatherModal({ title, projectId, initial, onClose, onSubmit, pending }:
             <input type="date" value={form.logDate} onChange={e => setForm({ ...form, logDate: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
           </Field>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="MORNING">
               <CondSelect value={form.morning} onChange={v => setForm({ ...form, morning: v })} />
             </Field>
@@ -268,7 +268,7 @@ function WeatherModal({ title, projectId, initial, onClose, onSubmit, pending }:
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="RAINFALL (mm)">
               <input type="number" step="0.1" min="0" value={form.rainfallMm} onChange={e => setForm({ ...form, rainfallMm: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
@@ -276,7 +276,7 @@ function WeatherModal({ title, projectId, initial, onClose, onSubmit, pending }:
               <input type="number" step="0.1" min="0" value={form.windKmh} onChange={e => setForm({ ...form, windKmh: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="TEMP MIN (°C)">
               <input type="number" step="0.1" value={form.tempMinC} onChange={e => setForm({ ...form, tempMinC: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
@@ -404,16 +404,16 @@ function EditDrawer({ id, projectId, isAdmin, onClose, onSaved, onDelete }: {
           <Field label="DATE">
             <input type="date" value={form.logDate} onChange={e => setForm({ ...form, logDate: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
           </Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="MORNING"><CondSelect value={form.morning} onChange={v => setForm({ ...form, morning: v })} /></Field>
             <Field label="AFTERNOON"><CondSelect value={form.afternoon} onChange={v => setForm({ ...form, afternoon: v })} /></Field>
             <Field label="EVENING"><CondSelect value={form.evening} onChange={v => setForm({ ...form, evening: v })} /></Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="RAINFALL (mm)"><input type="number" step="0.1" min="0" value={form.rainfallMm} onChange={e => setForm({ ...form, rainfallMm: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" /></Field>
             <Field label="WIND (km/h)"><input type="number" step="0.1" min="0" value={form.windKmh} onChange={e => setForm({ ...form, windKmh: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" /></Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="TEMP MIN (°C)"><input type="number" step="0.1" value={form.tempMinC} onChange={e => setForm({ ...form, tempMinC: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" /></Field>
             <Field label="TEMP MAX (°C)"><input type="number" step="0.1" value={form.tempMaxC} onChange={e => setForm({ ...form, tempMaxC: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" /></Field>
           </div>

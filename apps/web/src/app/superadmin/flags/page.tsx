@@ -14,11 +14,12 @@ export default function SuperAdminFlags() {
     <div className="space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">PLATFORM</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Feature Flags</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Feature Flags</h1>
         <p className="font-mono text-xs text-white/60 mt-2">Toggle global enable or set rollout %. Per-org overrides via /superadmin/orgs/[slug]. Order: override → rollout pct (deterministic per org) → global.</p>
       </div>
 
-      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50 min-w-[640px]">
         <thead className="bg-[var(--color-brand)]">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">KEY</th>
@@ -34,6 +35,7 @@ export default function SuperAdminFlags() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

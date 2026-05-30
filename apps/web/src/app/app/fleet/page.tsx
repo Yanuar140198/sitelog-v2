@@ -25,11 +25,11 @@ export default function FleetPage() {
   for (const u of units.data ?? []) byType.set(u.jenisAlat ?? '—', (byType.get(u.jenisAlat ?? '—') ?? 0) + 1);
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">EQUIPMENT</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Fleet Master</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Fleet Master</h1>
         </div>
         <Button variant="primary" onClick={() => setShow(true)}><Plus size={14} /> ADD UNIT</Button>
       </div>
@@ -42,7 +42,8 @@ export default function FleetPage() {
         ))}
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">NOMOR</th>
@@ -73,14 +74,15 @@ export default function FleetPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
           onClick={e => { if (e.target === e.currentTarget) setShow(false); }}>
-          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-xl w-full shadow-[8px_8px_0_var(--color-brand)]">
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
             <h2 className="font-display text-2xl font-bold mb-4">Add Unit</h2>
             <form onSubmit={e => { e.preventDefault(); create.mutate({ ...form, ratePerHour: Number(form.ratePerHour) || undefined }); }}
-              className="grid grid-cols-2 gap-3">
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>Nomor *</Label><Input required value={form.nomor} onChange={e => set('nomor', e.target.value)} /></div>
               <div><Label>Jenis Alat</Label><Input value={form.jenisAlat} onChange={e => set('jenisAlat', e.target.value)} placeholder="DT, EX, ADT" /></div>
               <div><Label>Fleet</Label><Input value={form.fleet} onChange={e => set('fleet', e.target.value)} /></div>
@@ -89,8 +91,8 @@ export default function FleetPage() {
               <div><Label>Model</Label><Input value={form.model} onChange={e => set('model', e.target.value)} /></div>
               <div><Label>Capacity</Label><Input value={form.capacity} onChange={e => set('capacity', e.target.value)} placeholder="30T" /></div>
               <div><Label>Rate / Hour (Rp)</Label><Input type="number" value={form.ratePerHour} onChange={e => set('ratePerHour', Number(e.target.value))} /></div>
-              {create.error && <div className="col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
-              <div className="col-span-2 flex gap-2 mt-3">
+              {create.error && <div className="sm:col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
+              <div className="sm:col-span-2 flex gap-2 mt-3">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>
               </div>

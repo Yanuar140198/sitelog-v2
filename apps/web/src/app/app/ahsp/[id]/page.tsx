@@ -248,12 +248,12 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   return (
-    <div className="p-8 max-w-6xl space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 max-w-6xl space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <Link href="/app/ahsp" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
           <ArrowLeft size={14} /> AHSP CATALOG
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <NavBtn disabled={!prevId} onClick={() => prevId && router.push(`/app/ahsp/${prevId}`)} icon={<ChevronLeft size={14} />} label="PREV" />
           <span className="font-mono text-xs text-neutral-400">
             {idx >= 0 ? `${idx + 1} / ${list.length}` : ''}
@@ -305,11 +305,11 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
           {item.kode}
           {item.deskripsi ? <span className="ml-3 text-neutral-400">· {item.deskripsi}</span> : null}
         </div>
-        <div className="flex items-start justify-between gap-4 mt-1">
-          <h1 className="font-display text-3xl font-bold flex-1 min-w-0">{item.jenis}</h1>
-          <div className="text-right shrink-0">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-2 sm:gap-4 mt-1">
+          <h1 className="font-display text-2xl md:text-3xl font-bold flex-1 min-w-0">{item.jenis}</h1>
+          <div className="text-left sm:text-right shrink-0">
             <div className="font-mono text-[10px] tracking-[0.2em] text-neutral-500">RATE PER {item.satuan}</div>
-            <div className="font-display text-3xl font-bold text-[var(--color-brand)] tabular-nums">
+            <div className="font-display text-2xl md:text-3xl font-bold text-[var(--color-brand)] tabular-nums">
               {fmtIDR(totals.unitRate)}
             </div>
           </div>
@@ -626,7 +626,8 @@ function InputsTable({
         )}
       </div>
       {rows.length > 0 ? (
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] font-mono text-xs">
           <thead className="bg-neutral-100">
             <tr>
               <th className="text-left px-3 py-1.5 w-24">KODE</th>
@@ -692,8 +693,10 @@ function InputsTable({
             )}
           </tbody>
         </table>
+        </div>
       ) : adding ? (
-        <table className="w-full font-mono text-xs"><tbody>
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] font-mono text-xs"><tbody>
           <InputRowAdd
             onCancel={() => setAdding(false)}
             onSave={async vals => {
@@ -703,6 +706,7 @@ function InputsTable({
             }}
           />
         </tbody></table>
+        </div>
       ) : (
         <div className="px-3 py-6 text-center text-neutral-400 font-mono text-xs">No inputs.</div>
       )}
@@ -860,7 +864,8 @@ function KoefTable({
         )}
       </div>
       {rows.length > 0 || adding ? (
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] font-mono text-xs">
           <thead className="bg-neutral-100">
             <tr>
               <th className="text-left px-3 py-1.5 w-24">KODE</th>
@@ -923,6 +928,7 @@ function KoefTable({
             )}
           </tbody>
         </table>
+        </div>
       ) : (
         <div className="px-3 py-6 text-center text-neutral-400 font-mono text-xs">No koefisien.</div>
       )}
@@ -1090,7 +1096,8 @@ function CategoryBlock({
           </button>
         )}
       </div>
-      <table className="w-full font-mono text-xs">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] font-mono text-xs">
         <thead className="bg-neutral-100">
           <tr>
             <th className="text-left px-3 py-1.5 w-28">KODE</th>
@@ -1207,6 +1214,7 @@ function CategoryBlock({
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

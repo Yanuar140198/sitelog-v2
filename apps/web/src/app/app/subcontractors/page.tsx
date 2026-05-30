@@ -53,11 +53,11 @@ export default function SubcontractorsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-wrap gap-2 items-end justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">VENDORS</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Subcontractors</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Subcontractors</h1>
           <p className="font-mono text-xs text-neutral-500 mt-2">
             {list.data?.length ?? 0} subkontraktor terdaftar
           </p>
@@ -65,7 +65,8 @@ export default function SubcontractorsPage() {
         <Button variant="primary" onClick={openCreate}><Plus size={14} /> NEW SUBCONTRACTOR</Button>
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">NAME</th>
@@ -103,6 +104,7 @@ export default function SubcontractorsPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {showModal && (
         <SubcontractorModal
@@ -132,10 +134,10 @@ function SubcontractorModal({ id, initial, onClose }: { id: string | null; initi
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-2xl w-full shadow-[8px_8px_0_var(--color-brand)]">
+      <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-2xl font-bold">{id ? 'Edit Subcontractor' : 'New Subcontractor'}</h2>
           <button onClick={onClose} className="p-1 hover:bg-neutral-100"><X size={16} /></button>
@@ -157,20 +159,20 @@ function SubcontractorModal({ id, initial, onClose }: { id: string | null; initi
             if (id) update.mutate({ id, ...payload });
             else create.mutate(payload);
           }}
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
         >
-          <div className="col-span-2"><Label>Name *</Label>
+          <div className="sm:col-span-2"><Label>Name *</Label>
             <Input required value={form.name} onChange={e => set('name', e.target.value)} placeholder="PT. Sumber Bor Mandiri / CV. Survey Geotek" />
           </div>
           <div><Label>NPWP</Label><Input value={form.npwp} onChange={e => set('npwp', e.target.value)} placeholder="00.000.000.0-000.000" /></div>
           <div><Label>Contact Person</Label><Input value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} /></div>
           <div><Label>Phone</Label><Input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0812..." /></div>
           <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
-          <div className="col-span-2"><Label>Address</Label><Input value={form.address} onChange={e => set('address', e.target.value)} /></div>
+          <div className="sm:col-span-2"><Label>Address</Label><Input value={form.address} onChange={e => set('address', e.target.value)} /></div>
           <div><Label>Bank Name</Label><Input value={form.bankName} onChange={e => set('bankName', e.target.value)} placeholder="BCA / Mandiri / BRI" /></div>
           <div><Label>Bank Account</Label><Input value={form.bankAccount} onChange={e => set('bankAccount', e.target.value)} /></div>
-          <div className="col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
-          <div className="col-span-2 flex gap-2 mt-3">
+          <div className="sm:col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
+          <div className="sm:col-span-2 flex gap-2 mt-3">
             <Button type="submit" variant="primary" disabled={pending}>{id ? 'SAVE' : 'CREATE'}</Button>
             <Button type="button" onClick={onClose}>CANCEL</Button>
           </div>

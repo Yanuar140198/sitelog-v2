@@ -20,7 +20,7 @@ export default function ApiKeysPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-wrap gap-2 justify-between items-end">
         <p className="font-mono text-xs text-neutral-600">API keys for programmatic access. Send as `Authorization: Bearer sk_live_...`.</p>
         <Button variant="primary" onClick={() => setShow(true)}><Plus size={14} /> NEW KEY</Button>
       </div>
@@ -36,7 +36,8 @@ export default function ApiKeysPage() {
         </div>
       )}
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">NAME</th>
@@ -70,11 +71,12 @@ export default function ApiKeysPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
           onClick={e => { if (e.target === e.currentTarget) setShow(false); }}>
-          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-md w-full shadow-[8px_8px_0_var(--color-brand)]">
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
             <div className="flex items-center gap-2 mb-4">
               <KeyRound size={20} className="text-[var(--color-brand)]" />
               <h2 className="font-display text-2xl font-bold">New API Key</h2>

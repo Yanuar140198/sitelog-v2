@@ -41,7 +41,7 @@ export default function SuperAdminErrors() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">PLATFORM</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Error Log</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Error Log</h1>
           <p className="font-mono text-xs text-white/60 mt-2">
             Captured client, tRPC, REST and server errors across all orgs.
           </p>
@@ -94,7 +94,8 @@ export default function SuperAdminErrors() {
       </div>
 
       {/* Table */}
-      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50 min-w-[720px]">
         <thead className="bg-[var(--color-brand)]">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">TIME</th>
@@ -151,6 +152,7 @@ export default function SuperAdminErrors() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

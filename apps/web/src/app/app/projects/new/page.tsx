@@ -24,10 +24,10 @@ export default function NewProjectPage() {
   function set<K extends keyof typeof form>(k: K, v: any) { setForm(prev => ({ ...prev, [k]: v })); }
 
   return (
-    <div className="p-8 max-w-3xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-8">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">CREATE</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">New Project</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">New Project</h1>
       </div>
       <form onSubmit={e => {
         e.preventDefault();
@@ -43,23 +43,23 @@ export default function NewProjectPage() {
         create.mutate(payload);
       }} className="space-y-6">
         <Section title="BASIC INFO">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Project Code *"><Input value={form.code} required onChange={e => set('code', e.target.value)} placeholder="LS 45" /></Field>
             <Field label="Status"><Input value="planning" readOnly /></Field>
             <Field label="Name *"><Input value={form.name} required onChange={e => set('name', e.target.value)} /></Field>
             <Field label="Client"><Input value={form.client} onChange={e => set('client', e.target.value)} /></Field>
-            <div className="col-span-2"><Field label="Location"><Input value={form.location} onChange={e => set('location', e.target.value)} /></Field></div>
+            <div className="sm:col-span-2"><Field label="Location"><Input value={form.location} onChange={e => set('location', e.target.value)} /></Field></div>
           </div>
         </Section>
         <Section title="SCHEDULE">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Start Date"><Input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} /></Field>
             <Field label="Finish Date"><Input type="date" value={form.finishDate} onChange={e => set('finishDate', e.target.value)} /></Field>
             <Field label="Duration (days)"><Input type="number" value={form.durationDays} onChange={e => set('durationDays', Number(e.target.value))} /></Field>
           </div>
         </Section>
         <Section title="VOLUMES (m³)">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Land Clearing"><Input type="number" step="0.01" value={form.planLandClearing} onChange={e => set('planLandClearing', Number(e.target.value))} /></Field>
             <Field label="Cut Soil"><Input type="number" step="0.01" value={form.planCutSoil} onChange={e => set('planCutSoil', Number(e.target.value))} /></Field>
             <Field label="Cut Rock"><Input type="number" step="0.01" value={form.planCutRock} onChange={e => set('planCutRock', Number(e.target.value))} /></Field>
@@ -68,20 +68,20 @@ export default function NewProjectPage() {
         </Section>
         <Section title="FLEET + TARGETS">
           <Field label="Fleet Design"><Input value={form.fleetDesign} onChange={e => set('fleetDesign', e.target.value)} placeholder="DT 30T × 6, EX PC400 × 2" /></Field>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <Field label="Target Cut / Day"><Input type="number" value={form.targetCutDaily} onChange={e => set('targetCutDaily', Number(e.target.value))} /></Field>
             <Field label="Target Fill / Day"><Input type="number" value={form.targetFillDaily} onChange={e => set('targetFillDaily', Number(e.target.value))} /></Field>
           </div>
         </Section>
         <Section title="FINANCIAL DEFAULTS (%)">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Markup"><Input type="number" step="0.1" value={form.markupPct} onChange={e => set('markupPct', Number(e.target.value))} /></Field>
             <Field label="Contingency"><Input type="number" step="0.1" value={form.contingencyPct} onChange={e => set('contingencyPct', Number(e.target.value))} /></Field>
             <Field label="PPN"><Input type="number" step="0.1" value={form.ppnPct} onChange={e => set('ppnPct', Number(e.target.value))} /></Field>
           </div>
         </Section>
         <Section title="GEOFENCE (OPTIONAL)">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Site Latitude"><Input type="number" step="0.0000001" value={form.siteLat} onChange={e => set('siteLat', e.target.value)} placeholder="-3.1234" /></Field>
             <Field label="Site Longitude"><Input type="number" step="0.0000001" value={form.siteLng} onChange={e => set('siteLng', e.target.value)} placeholder="121.5678" /></Field>
             <Field label="Radius (m)"><Input type="number" value={form.geofenceRadiusM} onChange={e => set('geofenceRadiusM', e.target.value)} placeholder="500" /></Field>

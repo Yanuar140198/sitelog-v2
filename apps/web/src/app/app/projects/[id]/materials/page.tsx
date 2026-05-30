@@ -39,8 +39,8 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-neutral-50 p-6 space-y-6">
-      <header className="flex items-center justify-between">
+    <div className="min-h-[calc(100vh-56px)] bg-neutral-50 p-4 md:p-6 space-y-6">
+      <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <Link href={`/app/projects/${id}`} className="font-mono text-[10px] tracking-wider text-[var(--color-brand)] hover:underline">
             ← BACK TO BOQ
@@ -54,7 +54,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
 
       {/* STOCK BALANCE */}
       <section className="bg-white border-2 border-[var(--color-ink)]">
-        <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex justify-between items-center">
+        <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex justify-between items-center flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Package size={16} className="text-[var(--color-brand)]" />
             <h2 className="font-display text-sm font-bold tracking-tight">STOCK BALANCE</h2>
@@ -70,7 +70,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
               No materials tracked yet. Add the first one to start.
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[1000px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider">KODE</th>
@@ -122,7 +122,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
 
       {/* DELIVERY LOG */}
       <section className="bg-white border-2 border-[var(--color-ink)]">
-        <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex justify-between items-center">
+        <div className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex justify-between items-center flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Truck size={16} className="text-[var(--color-brand)]" />
             <h2 className="font-display text-sm font-bold tracking-tight">DELIVERY LOG</h2>
@@ -138,7 +138,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
               No deliveries recorded yet.
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[900px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-[100px]">DATE</th>
@@ -228,7 +228,7 @@ function AddStockModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
       <div className="space-y-3">
         <Field label="Kode *"><Input value={form.materialCode} onChange={e => setForm({ ...form, materialCode: e.target.value })} placeholder="e.g. SOLAR, SMN-50, GEOTEX-300" /></Field>
         <Field label="Nama *"><Input value={form.materialName} onChange={e => setForm({ ...form, materialName: e.target.value })} placeholder="Solar Industri / Semen 50kg / Geotextile NW 300gsm" /></Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Satuan *"><Input value={form.satuan} onChange={e => setForm({ ...form, satuan: e.target.value })} placeholder="LTR / SAK / M2" /></Field>
           <Field label="Qty Ordered (PO)"><Input type="number" step="any" value={form.qtyOrdered} onChange={e => setForm({ ...form, qtyOrdered: Number(e.target.value) })} /></Field>
         </div>
@@ -318,16 +318,16 @@ function AddDeliveryModal({ stocks, onClose, onSubmit }: {
             <Input value={form.materialCode} onChange={e => setForm({ ...form, materialCode: e.target.value })} placeholder="Material code (will auto-create stock row)" />
           )}
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Qty *"><Input type="number" step="any" value={form.qty} onChange={e => setForm({ ...form, qty: Number(e.target.value) })} /></Field>
           <Field label="Date *"><Input type="date" value={form.deliveryDate} onChange={e => setForm({ ...form, deliveryDate: e.target.value })} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="DO Number"><Input value={form.doNumber ?? ''} onChange={e => setForm({ ...form, doNumber: e.target.value })} placeholder="DO-2026-001" /></Field>
           <Field label="Unit Price (Rp)"><Input type="number" step="any" value={form.unitPrice ?? 0} onChange={e => setForm({ ...form, unitPrice: Number(e.target.value) })} /></Field>
         </div>
         <Field label="Supplier"><Input value={form.supplier ?? ''} onChange={e => setForm({ ...form, supplier: e.target.value })} /></Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Vehicle Plate"><Input value={form.vehiclePlate ?? ''} onChange={e => setForm({ ...form, vehiclePlate: e.target.value })} placeholder="B 1234 ABC" /></Field>
           <Field label="Driver"><Input value={form.driverName ?? ''} onChange={e => setForm({ ...form, driverName: e.target.value })} /></Field>
         </div>
