@@ -25,7 +25,7 @@ elif ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
 fi
 
 echo "[dev-start] Applying migrations..."
-DATABASE_URL="${DB_URL}" pnpm --filter @sitelog/db migrate
+DATABASE_URL="${DB_URL}" pnpm db:apply
 
 cat <<EOF
 

@@ -38,7 +38,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm db:migrate
+      - run: pnpm db:apply  # drizzle journal frozen at 0007 + TS schema diverged; apply the ordered SQL migrations (full schema incl SQL-only tables like idempotency_key)
       - run: pnpm test  # unit (shared) + DB-backed tenant-isolation IDOR tests
       - run: pnpm build
 
@@ -70,7 +70,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with: { bun-version: latest }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrate
+      - run: pnpm db:apply  # drizzle journal frozen at 0007 + TS schema diverged; apply the ordered SQL migrations (full schema incl SQL-only tables like idempotency_key)
       - run: pnpm test:e2e:install
       - run: pnpm test:e2e
       - if: failure()
