@@ -296,16 +296,21 @@ app.use('/api/trpc/*', trpcServer({
   },
   onError: ({ error, path, type, ctx }) => {
     console.error(`[trpc] ${path}: ${error.code} ${error.message}`);
-    void recordError({
-      source: 'trpc',
-      level: error.code === 'INTERNAL_SERVER_ERROR' ? 'error' : 'warn',
-      message: `${error.code}: ${error.message}`,
-      stack: error.stack,
-      path: path ?? null,
-      method: type,
-      organizationId: (ctx as any)?.session?.organizationId ?? null,
-      userId: (ctx as any)?.session?.user?.id ?? null,
-    });
+    // Skip expected auth/flow errors (they fire on every unauthenticated request);
+    // log real failures so QA/testing surfaces them.
+    const EXPECTED = new Set(['UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND']);
+    if (!EXPECTED.has(error.code)) {
+      void recordError({
+        source: 'trpc',
+        level: error.code === 'INTERNAL_SERVER_ERROR' ? 'error' : 'warn',
+        message: `${error.code}: ${error.message}`,
+        stack: error.stack,
+        path: path ?? null,
+        method: type,
+        organizationId: (ctx as any)?.session?.organizationId ?? null,
+        userId: (ctx as any)?.session?.user?.id ?? null,
+      });
+    }
   },
 }));
 
