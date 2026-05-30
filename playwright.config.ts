@@ -1,21 +1,27 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E config. `globalSetup` provisions the demo tenant + mints a REST API key.
+ * E2E config.
  *
- * Servers: by default Playwright boots the API (bun) + Web (next build/start, prod
- * mode to avoid turbopack cold-compile flakiness) itself. A Postgres DB must already
- * be running and migrated — locally `bash scripts/dev-start.sh`; in CI a postgres
- * service + `pnpm db:migrate`.
+ * LOCAL / CI-with-DB (default): Playwright boots the API (bun) + Web (next build/start,
+ * prod mode to avoid turbopack cold-compile flakiness), and `globalSetup` provisions the
+ * demo tenant + mints a REST API key. A Postgres DB must already be running and migrated —
+ * locally `bash scripts/dev-start.sh`; in CI a postgres service + `pnpm db:migrate`.
  *
- * Set E2E_NO_WEBSERVER=1 to manage the servers yourself (faster iteration loop).
+ * EXTERNAL target (e.g. nightly against staging): when E2E_BASE_URL points at a non-local
+ * host, both the webServer and globalSetup are skipped — tests hit the deployed app and
+ * read SITELOG_API_KEY from the environment (provided as a CI secret).
+ *
+ * Set E2E_NO_WEBSERVER=1 to manage the local servers yourself (faster iteration loop).
  */
+const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+const EXTERNAL = !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(BASE_URL);
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:dev@localhost:5434/sitelog';
 const ADMIN_EMAILS = process.env.SITELOG_ADMIN_EMAILS ?? process.env.E2E_EMAIL ?? 'demo@sitelog.local';
 
 export default defineConfig({
   testDir: './e2e',
-  globalSetup: './e2e/global-setup.ts',
+  globalSetup: EXTERNAL ? undefined : './e2e/global-setup.ts',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
@@ -30,7 +36,7 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
-  webServer: process.env.E2E_NO_WEBSERVER ? undefined : [
+  webServer: (process.env.E2E_NO_WEBSERVER || EXTERNAL) ? undefined : [
     {
       command: 'bun src/server.ts',
       cwd: './apps/api',

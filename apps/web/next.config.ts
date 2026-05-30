@@ -4,8 +4,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 const config: NextConfig = {
   transpilePackages: ['@sitelog/api', '@sitelog/api-client', '@sitelog/auth', '@sitelog/db'],
+  typedRoutes: true,
   experimental: {
-    typedRoutes: true,
     serverActions: { bodySizeLimit: '10mb' },
   },
   images: {
