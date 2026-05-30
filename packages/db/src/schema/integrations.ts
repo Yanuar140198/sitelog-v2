@@ -49,5 +49,24 @@ export const apiKey = pgTable('api_key', {
   index('api_key_org_idx').on(t.organizationId),
 ]);
 
+/**
+ * Per-org encrypted third-party credentials (BYO keys), e.g. each customer's own
+ * Anthropic API key for the AI assistant. Secret value is AES-256-GCM sealed —
+ * only ciphertext/iv/authTag are stored; `hint` keeps the last few chars for display.
+ */
+export const orgSecret = pgTable('org_secret', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').notNull().references(() => organization.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', { length: 32 }).notNull(),   // 'anthropic'
+  ciphertext: text('ciphertext').notNull(),
+  iv: varchar('iv', { length: 32 }).notNull(),
+  authTag: varchar('auth_tag', { length: 32 }).notNull(),
+  hint: varchar('hint', { length: 12 }),                     // e.g. last 4 chars, for display
+  createdById: uuid('created_by_id').references(() => user.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, t => [uniqueIndex('org_secret_provider_idx').on(t.organizationId, t.provider)]);
+
 export type WebhookEndpoint = typeof webhookEndpoint.$inferSelect;
 export type ApiKey = typeof apiKey.$inferSelect;
+export type OrgSecret = typeof orgSecret.$inferSelect;

@@ -1,19 +1,14 @@
 /**
- * Anthropic (Claude) client — lazily initialized from ANTHROPIC_API_KEY.
- * Null when the key is absent (AI features degrade gracefully), mirroring the
- * stripe/r2 optional-integration pattern.
+ * Claude call helper. The API key is supplied per call — resolved by the caller
+ * from the org's own stored key (BYO) with the server-level ANTHROPIC_API_KEY as
+ * an optional fallback (self-hosted / single-tenant).
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-const apiKey = process.env.ANTHROPIC_API_KEY;
-
-export const anthropic = apiKey ? new Anthropic({ apiKey }) : null;
-
 export const AI_MODEL = 'claude-opus-4-7';
 
-export function aiConfigured(): boolean {
-  return anthropic !== null;
-}
+/** Optional server-wide fallback key (self-hosting). Null in a BYO-key deployment. */
+export const ENV_ANTHROPIC_KEY: string | null = process.env.ANTHROPIC_API_KEY ?? null;
 
 export interface AiResult {
   text: string;
@@ -26,14 +21,12 @@ export interface AiResult {
 }
 
 /**
- * Single-shot Claude call. `system` is cached (stable prefix); `user` carries
- * the per-request, volatile payload so the cache stays warm across calls.
+ * Single-shot Claude call with the given API key. `system` is cached (stable
+ * prefix); `user` carries the per-request payload so the cache stays warm.
  */
-export async function runClaude(system: string, user: string, maxTokens = 4000): Promise<AiResult> {
-  if (!anthropic) {
-    throw new Error('AI is not configured on this server (missing ANTHROPIC_API_KEY).');
-  }
-  const res = await anthropic.messages.create({
+export async function runClaude(apiKey: string, system: string, user: string, maxTokens = 4000): Promise<AiResult> {
+  const client = new Anthropic({ apiKey });
+  const res = await client.messages.create({
     model: AI_MODEL,
     max_tokens: maxTokens,
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],

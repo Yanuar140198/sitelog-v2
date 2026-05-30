@@ -1,20 +1,24 @@
 /**
- * AI assistant router — Claude-powered helpers.
- *   - status:           is the server configured with an API key?
+ * AI assistant router — Claude-powered helpers, BYO key per org.
+ *   - status:           is an Anthropic key configured for this org?
+ *   - setApiKey/clear:  owner/admin manage the org's own Anthropic key (encrypted at rest)
  *   - draftDailyReport: narrative daily report from a daily entry's data
  *   - explainRate:      plain-language explanation of an AHSP unit rate
  *
- * All data is org-scoped before being sent to Claude (tenant isolation).
+ * Each org supplies its own Anthropic API key (sealed via AES-256-GCM). A
+ * server-level ANTHROPIC_API_KEY is used only as a fallback (self-hosting).
+ * All data is org-scoped before being sent to Claude.
  */
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
-import { router, orgProcedure } from '../trpc.js';
+import { router, orgProcedure, requireRole } from '../trpc.js';
 import {
   dailyEntry, entryActivity, entryEquipmentUtil, unit, project,
-  ahspItem, ahspResource,
+  ahspItem, ahspResource, orgSecret,
 } from '@sitelog/db';
-import { aiConfigured, runClaude } from '../lib/anthropic.js';
+import { runClaude, ENV_ANTHROPIC_KEY } from '../lib/anthropic.js';
+import { seal, open } from '../lib/secret-box.js';
 import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
 import {
   DAILY_REPORT_SYSTEM, buildDailyReportUser,
@@ -22,13 +26,78 @@ import {
 } from '../lib/ai-prompts.js';
 
 const N = (v: unknown) => Number(v ?? 0);
+const PROVIDER = 'anthropic';
+
+async function getOrgSecret(ctx: any) {
+  const [sec] = await ctx.db.select().from(orgSecret)
+    .where(and(eq(orgSecret.organizationId, ctx.session.organizationId), eq(orgSecret.provider, PROVIDER)))
+    .limit(1);
+  return sec ?? null;
+}
+
+/** Resolve the API key to use: the org's own key, else the server fallback. */
+async function resolveKey(ctx: any): Promise<string | null> {
+  const sec = await getOrgSecret(ctx);
+  if (sec) {
+    try { return open({ ciphertext: sec.ciphertext, iv: sec.iv, authTag: sec.authTag }); }
+    catch { return null; }
+  }
+  return ENV_ANTHROPIC_KEY;
+}
+
+async function keyOrThrow(ctx: any): Promise<string> {
+  const key = await resolveKey(ctx);
+  if (!key) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'AI belum dikonfigurasi. Masukkan Anthropic API key organisasi Anda di halaman AI Assistant.',
+    });
+  }
+  return key;
+}
 
 export const aiRouter = router({
-  status: orgProcedure.query(() => ({ configured: aiConfigured() })),
+  status: orgProcedure.query(async ({ ctx }) => {
+    const sec = await getOrgSecret(ctx);
+    if (sec) return { configured: true, source: 'org' as const, hint: sec.hint ?? null };
+    if (ENV_ANTHROPIC_KEY) return { configured: true, source: 'server' as const, hint: null };
+    return { configured: false, source: 'none' as const, hint: null };
+  }),
+
+  setApiKey: requireRole('owner', 'admin')
+    .input(z.object({ key: z.string().min(20).max(300) }))
+    .mutation(async ({ ctx, input }) => {
+      const key = input.key.trim();
+      if (!key.startsWith('sk-ant-')) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format key tidak valid (harus diawali "sk-ant-").' });
+      }
+      const sealed = seal(key);
+      const hint = `…${key.slice(-4)}`;
+      await ctx.db.insert(orgSecret).values({
+        organizationId: ctx.session.organizationId,
+        provider: PROVIDER,
+        ciphertext: sealed.ciphertext,
+        iv: sealed.iv,
+        authTag: sealed.authTag,
+        hint,
+        createdById: ctx.session.user.id,
+      }).onConflictDoUpdate({
+        target: [orgSecret.organizationId, orgSecret.provider],
+        set: { ciphertext: sealed.ciphertext, iv: sealed.iv, authTag: sealed.authTag, hint, updatedAt: new Date() },
+      });
+      return { configured: true, hint };
+    }),
+
+  clearApiKey: requireRole('owner', 'admin').mutation(async ({ ctx }) => {
+    await ctx.db.delete(orgSecret)
+      .where(and(eq(orgSecret.organizationId, ctx.session.organizationId), eq(orgSecret.provider, PROVIDER)));
+    return { configured: false };
+  }),
 
   draftDailyReport: orgProcedure
     .input(z.object({ entryId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      const apiKey = await keyOrThrow(ctx);
       // Org-scope the entry via its project.
       const [row] = await ctx.db
         .select({ entry: dailyEntry, projectName: project.name })
@@ -66,12 +135,13 @@ export const aiRouter = router({
         })),
       });
 
-      return runClaude(DAILY_REPORT_SYSTEM, user);
+      return runClaude(apiKey, DAILY_REPORT_SYSTEM, user);
     }),
 
   explainRate: orgProcedure
     .input(z.object({ ahspItemId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      const apiKey = await keyOrThrow(ctx);
       // Readable if org-owned OR a global catalog item (organizationId null).
       const [item] = await ctx.db.select().from(ahspItem)
         .where(eq(ahspItem.id, input.ahspItemId)).limit(1);
@@ -112,6 +182,6 @@ export const aiRouter = router({
         totals: { abcSubtotal: totals.jumlahABC, ohpAmount: totals.ohpAmt, unitRate: totals.unitRate },
       });
 
-      return runClaude(EXPLAIN_RATE_SYSTEM, user, 1500);
+      return runClaude(apiKey, EXPLAIN_RATE_SYSTEM, user, 1500);
     }),
 });

@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sparkles, FileText, Calculator, Copy, Check, Loader2 } from 'lucide-react';
+import { Sparkles, FileText, Calculator, Copy, Check, Loader2, KeyRound } from 'lucide-react';
 
 type Tool = 'report' | 'rate';
 
@@ -11,7 +12,7 @@ export default function AiAssistantPage() {
   const [tool, setTool] = useState<Tool>('report');
 
   const status = trpc.ai.status.useQuery();
-  const configured = status.data?.configured !== false;
+  const configured = status.data?.configured === true;
 
   return (
     <div className="p-8 space-y-6">
@@ -27,12 +28,8 @@ export default function AiAssistantPage() {
         </p>
       </div>
 
-      {/* NOT CONFIGURED BANNER */}
-      {status.data?.configured === false && (
-        <div className="border-2 border-red-600 bg-red-50 p-4 font-mono text-xs text-red-700">
-          AI belum dikonfigurasi di server (ANTHROPIC_API_KEY belum diset).
-        </div>
-      )}
+      {/* API KEY SETTINGS */}
+      <ApiKeySettings />
 
       {/* TABS */}
       <div className="flex border-2 border-[var(--color-ink)] w-fit">
@@ -51,6 +48,95 @@ export default function AiAssistantPage() {
       </div>
 
       {tool === 'report' ? <DailyReportTool disabled={!configured} /> : <ExplainRateTool disabled={!configured} />}
+    </div>
+  );
+}
+
+/* ---------- API key settings ---------- */
+function ApiKeySettings() {
+  const utils = trpc.useUtils();
+  const status = trpc.ai.status.useQuery();
+  const [key, setKey] = useState('');
+
+  const setApiKey = trpc.ai.setApiKey.useMutation({
+    onSuccess: () => {
+      setKey('');
+      utils.ai.status.invalidate();
+    },
+  });
+  const clearApiKey = trpc.ai.clearApiKey.useMutation({
+    onSuccess: () => {
+      utils.ai.status.invalidate();
+    },
+  });
+
+  const data = status.data;
+  const source = data?.source;
+
+  return (
+    <div className="border-2 border-[var(--color-ink)] bg-white p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <KeyRound size={14} className="text-[var(--color-brand)]" />
+        <h2 className="font-mono text-xs tracking-[0.2em]">PENGATURAN AI — ANTHROPIC API KEY</h2>
+      </div>
+
+      {/* STATUS */}
+      {data?.configured && source === 'org' && (
+        <div className="flex items-center justify-between gap-3 font-mono text-xs">
+          <span className="text-green-700">Terhubung (key: {data.hint})</span>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={clearApiKey.isPending}
+            onClick={() => clearApiKey.mutate()}
+          >
+            {clearApiKey.isPending ? <><Loader2 size={14} className="animate-spin" /> MENGHAPUS…</> : 'Hapus Key'}
+          </Button>
+        </div>
+      )}
+      {data?.configured && source === 'server' && (
+        <p className="font-mono text-xs text-neutral-600">Menggunakan key server (fallback).</p>
+      )}
+      {data && !data.configured && (
+        <p className="font-mono text-xs text-neutral-600">
+          AI memerlukan Anthropic API key milik organisasi Anda untuk aktif.
+        </p>
+      )}
+
+      {/* INPUT */}
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Label className="font-mono text-[10px] tracking-[0.2em]">API KEY</Label>
+          <Input
+            type="password"
+            placeholder="sk-ant-..."
+            value={key}
+            onChange={e => setKey(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="primary"
+          disabled={!key || setApiKey.isPending}
+          onClick={() => setApiKey.mutate({ key })}
+        >
+          {setApiKey.isPending ? <><Loader2 size={14} className="animate-spin" /> MENYIMPAN…</> : 'Simpan Key'}
+        </Button>
+      </div>
+
+      {setApiKey.error && (
+        <div className="border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-700">
+          {setApiKey.error.message}
+        </div>
+      )}
+      {clearApiKey.error && (
+        <div className="border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-700">
+          {clearApiKey.error.message}
+        </div>
+      )}
+
+      <p className="font-mono text-[10px] text-neutral-500">
+        Dapatkan key di console.anthropic.com. Key disimpan terenkripsi.
+      </p>
     </div>
   );
 }
