@@ -34,6 +34,7 @@ interface ResolvedResourceLine {
   uraian: string;
   koefisien: number;
   koefisienOrig: number;
+  formula: string | null;
   hsd: number;
   hsdOrig: number;
   total: number;
@@ -97,6 +98,7 @@ async function resolveRates(
         uraian: r.uraian,
         koefisien: koef,
         koefisienOrig: koefOrig,
+        formula: ov.koef != null ? null : (r.formula ?? null),
         hsd,
         hsdOrig,
         total: koef * hsd,
