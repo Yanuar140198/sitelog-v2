@@ -3,13 +3,15 @@
 Runs Sitelog v2 on your own server (e.g. the LXC box) behind Cloudflare Tunnel,
 on its own subdomain — **without touching** any other app (e.g. `spi.k11ops.com`).
 
-Single public hostname (e.g. `app.k11ops.com`) → the **web** container; the web app
-proxies `/api/*` to the **api** container internally (Next.js rewrites), so you only
-expose one hostname.
+Two hostnames: `app.k11ops.com` → **web**, `api.k11ops.com` → **api**. The browser
+talks to BOTH — the auth client + status page call the API directly (not only via the
+web proxy), so the API must be browser-reachable on its own origin.
 
 ```
-Browser ──► app.k11ops.com (Cloudflare Tunnel) ──► web:3000 ──/api/*──► api:4000 ──► db (Postgres)
+Browser ─┬─► app.k11ops.com (Tunnel) ──► web:3000 ──► db (Postgres)
+         └─► api.k11ops.com (Tunnel) ──► api:4000 ──► db
 ```
+(LAN / no-DNS: reach web at `http://<host>:3000` and api at `http://<host>:4000`.)
 
 ## 1. Prereqs on the server
 - Docker + Docker Compose plugin.
@@ -33,11 +35,11 @@ BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 SECRET_ENCRYPTION_KEY=$(openssl rand -hex 32)
 SITELOG_ADMIN_EMAILS=you@k11ops.com
 
-# Public origins (same hostname for web; api is internal):
+# Public origins — web + api are SEPARATE browser-reachable hostnames:
 NEXT_PUBLIC_WEB_URL=https://app.k11ops.com
-NEXT_PUBLIC_API_URL=https://app.k11ops.com
-BETTER_AUTH_URL=https://app.k11ops.com
-BETTER_AUTH_TRUSTED_ORIGINS=https://app.k11ops.com
+NEXT_PUBLIC_API_URL=https://api.k11ops.com
+BETTER_AUTH_URL=https://api.k11ops.com
+BETTER_AUTH_TRUSTED_ORIGINS=https://app.k11ops.com,https://api.k11ops.com
 ```
 (Stripe/Resend/R2/Anthropic are optional — leave blank to disable those features.
 AI keys are normally added per-org in the app at `/app/ai`.)
@@ -63,7 +65,11 @@ Add an ingress rule for the new hostname pointing at the web container, then a D
 ```yaml
   - hostname: app.k11ops.com
     service: http://localhost:3000
+  - hostname: api.k11ops.com
+    service: http://localhost:4000
 ```
+Route DNS for both: `cloudflared tunnel route dns <TUNNEL> app.k11ops.com` and
+`... api.k11ops.com`.
 Then:
 ```bash
 cloudflared tunnel route dns <YOUR_TUNNEL_NAME> app.k11ops.com

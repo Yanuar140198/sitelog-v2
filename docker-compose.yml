@@ -7,11 +7,14 @@
 #            docker compose exec -T db psql -U sitelog -d sitelog < packages/db/schema.sql
 # Logs:      docker compose logs -f api web
 #
-# Put the public origins in .env (see .env.example), e.g.
+# Put the public origins in .env (see .env.example). The API must be reachable
+# FROM THE BROWSER (the auth client + status page call NEXT_PUBLIC_API_URL directly,
+# not only via the web proxy) — so expose it on its own hostname (or host port), e.g.
 #   NEXT_PUBLIC_WEB_URL=https://app.k11ops.com
-#   NEXT_PUBLIC_API_URL=https://app.k11ops.com   # browser hits web, which proxies /api/* to the api container
-#   BETTER_AUTH_URL=https://app.k11ops.com
-#   BETTER_AUTH_TRUSTED_ORIGINS=https://app.k11ops.com
+#   NEXT_PUBLIC_API_URL=https://api.k11ops.com         # NOT the web URL — points at the api
+#   BETTER_AUTH_URL=https://api.k11ops.com
+#   BETTER_AUTH_TRUSTED_ORIGINS=https://app.k11ops.com,https://api.k11ops.com
+# (LAN/no-DNS example: NEXT_PUBLIC_API_URL=http://<host-ip>:4000 — the api maps :4000.)
 
 services:
   db:
