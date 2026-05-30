@@ -9,7 +9,7 @@
   "dependencies": {
     "@sitelog/db": "workspace:*",
     "better-auth": "^1.1.7",
-    "drizzle-orm": "^0.38.2"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "typescript": "^5.7.2"
