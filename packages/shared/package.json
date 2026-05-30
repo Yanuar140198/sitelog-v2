@@ -7,7 +7,8 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./boq-math": "./src/boq-math.ts"
+    "./boq-math": "./src/boq-math.ts",
+    "./formula": "./src/formula.ts"
   },
   "scripts": {
     "test": "vitest run",

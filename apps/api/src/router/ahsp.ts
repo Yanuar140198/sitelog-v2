@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { and, eq, or, isNull, asc, desc, max, inArray, sql } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, ahspPin, resourceMaster, user } from '@sitelog/db';
+import { evalFormula } from '@sitelog/shared';
 import { TRPCError } from '@trpc/server';
 import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
 import { estimateProductivity } from '../lib/productivity.js';
@@ -305,6 +306,7 @@ export const ahspRouter = router({
               uraian: r.uraian,
               satuan: r.satuan,
               koefisien: koef,
+              formula: r.formula ?? null,
               hsd,
               subtotal: koef * hsd,
             };
@@ -404,6 +406,7 @@ export const ahspRouter = router({
       resourceCode: z.string().min(1),
       uraian: z.string().min(1),
       koefisien: z.number(),
+      formula: z.string().max(256).optional(),   // optional: derives koefisien, e.g. "1 / (Q × n)"
       satuan: z.string().optional(),
       hsd: z.number(),
     }))
@@ -413,13 +416,29 @@ export const ahspRouter = router({
         .where(and(eq(ahspItem.id, input.ahspItemId), eq(ahspItem.organizationId, ctx.session.organizationId)))
         .limit(1);
       if (!own) throw new TRPCError({ code: 'FORBIDDEN', message: 'Can only edit org-owned AHSP items' });
+
+      // If a formula is given, evaluate it against the item's input variables so the
+      // coefficient's basis is explicit + recomputable.
+      let koef = input.koefisien;
+      const formula = input.formula?.trim() || null;
+      if (formula) {
+        const inputs = await ctx.db.select({ variable: ahspInput.variable, nilai: ahspInput.nilai })
+          .from(ahspInput).where(eq(ahspInput.ahspItemId, input.ahspItemId));
+        const vars: Record<string, number> = {};
+        for (const i of inputs) { if (i.variable && i.nilai != null) vars[i.variable] = Number(i.nilai); }
+        const r = evalFormula(formula, vars);
+        if (!r.ok) throw new TRPCError({ code: 'BAD_REQUEST', message: `Formula tidak valid: ${r.error}` });
+        koef = r.value;
+      }
+
       const values = {
         ahspItemId: input.ahspItemId,
         category: input.category,
         ordinal: input.ordinal,
         resourceCode: input.resourceCode,
         uraian: input.uraian,
-        koefisien: String(input.koefisien),
+        koefisien: String(koef),
+        formula,
         satuan: input.satuan,
         hsd: String(input.hsd),
       };

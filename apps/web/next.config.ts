@@ -7,7 +7,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_INTERNAL = process.env.API_INTERNAL_URL ?? API_URL;
 
 const config: NextConfig = {
-  transpilePackages: ['@sitelog/api', '@sitelog/api-client', '@sitelog/auth', '@sitelog/db'],
+  transpilePackages: ['@sitelog/api', '@sitelog/api-client', '@sitelog/auth', '@sitelog/db', '@sitelog/shared'],
+  // Workspace packages use `.js`-extension imports in TS source (ESM bundler style);
+  // let webpack resolve those to the .ts/.tsx files.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias ?? {}),
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+    };
+    return config;
+  },
   typedRoutes: true,
   experimental: {
     serverActions: { bodySizeLimit: '10mb' },

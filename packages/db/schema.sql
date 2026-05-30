@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict d61qgpjfSXpbHDbL2uofDMRxnGyqpAbLTNei0hiUs5mG4sfv7lmm0b6tIut6RrT
+\restrict crkFMbfiIUfyhdVzCrqMUCstpnzQ73YlCt2DgrVxjGwncvHWI8ee8pQ8fHCnUJy
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -408,7 +408,8 @@ CREATE TABLE public.ahsp_resource (
     koefisien numeric(18,8) NOT NULL,
     satuan character varying(32),
     hsd numeric(18,2) NOT NULL,
-    resource_master_id uuid
+    resource_master_id uuid,
+    formula text
 );
 
 
@@ -676,6 +677,29 @@ CREATE TABLE public.entry_photo (
     ai_tags text,
     ai_progress_pct numeric(5,1),
     ai_analyzed_at timestamp without time zone
+);
+
+
+--
+-- Name: error_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.error_log (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    source character varying(16) NOT NULL,
+    level character varying(16) DEFAULT 'error'::character varying NOT NULL,
+    message text NOT NULL,
+    stack text,
+    path text,
+    method character varying(8),
+    status integer,
+    url text,
+    user_agent text,
+    organization_id uuid,
+    user_id uuid,
+    request_id character varying(64),
+    context text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -1579,6 +1603,14 @@ ALTER TABLE ONLY public.entry_photo
 
 
 --
+-- Name: error_log error_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.error_log
+    ADD CONSTRAINT error_log_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: feature_flag_override feature_flag_override_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2152,6 +2184,13 @@ CREATE INDEX entry_eq_util_unit_idx ON public.entry_equipment_util USING btree (
 --
 
 CREATE INDEX entry_photo_entry_idx ON public.entry_photo USING btree (daily_entry_id);
+
+
+--
+-- Name: error_log_created_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX error_log_created_idx ON public.error_log USING btree (created_at);
 
 
 --
@@ -3231,5 +3270,5 @@ ALTER TABLE ONLY public.webhook_endpoint
 -- PostgreSQL database dump complete
 --
 
-\unrestrict d61qgpjfSXpbHDbL2uofDMRxnGyqpAbLTNei0hiUs5mG4sfv7lmm0b6tIut6RrT
+\unrestrict crkFMbfiIUfyhdVzCrqMUCstpnzQ73YlCt2DgrVxjGwncvHWI8ee8pQ8fHCnUJy
 
