@@ -768,7 +768,7 @@ function AhspCatalogInner() {
               <div className="col-span-2"><Label>Jenis Pekerjaan *</Label><Input required value={form.jenis} onChange={e => set('jenis', e.target.value)} placeholder="Custom Cut Soil with Bulldozer" /></div>
               <div><Label>Section</Label><Input value={form.section} onChange={e => set('section', e.target.value)} placeholder="EARTHWORK" /></div>
               <div><Label>Satuan *</Label><Input required value={form.satuan} onChange={e => set('satuan', e.target.value)} placeholder="M3" /></div>
-              <div><Label>OHP %</Label><Input type="number" step="0.1" value={form.ohpPct} onChange={e => set('ohpPct', e.target.value)} /></div>
+              <div><Label>OHP %</Label><Input type="number" step="0.1" value={form.ohpPct} onChange={e => set('ohpPct', Number(e.target.value) || 0)} /></div>
               <div className="col-span-2 flex gap-2 mt-3">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>

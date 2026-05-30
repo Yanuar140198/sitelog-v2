@@ -174,8 +174,8 @@ function CrewModal({ onClose, initial, id }: { onClose: () => void; initial?: Pa
               {ROLES.map(r => <option key={r} value={r}>{r.toUpperCase()}</option>)}
             </select>
           </div>
-          <div><Label>Daily Rate (Rp)</Label><Input type="number" value={form.dailyRate} onChange={e => set('dailyRate', e.target.value as any)} /></div>
-          <div><Label>Hourly Rate (Rp)</Label><Input type="number" value={form.hourlyRate} onChange={e => set('hourlyRate', e.target.value as any)} /></div>
+          <div><Label>Daily Rate (Rp)</Label><Input type="number" value={form.dailyRate} onChange={e => set('dailyRate', Number(e.target.value))} /></div>
+          <div><Label>Hourly Rate (Rp)</Label><Input type="number" value={form.hourlyRate} onChange={e => set('hourlyRate', Number(e.target.value))} /></div>
           <div><Label>Hire Date</Label><Input type="date" value={form.hireDate} onChange={e => set('hireDate', e.target.value)} /></div>
           {isEdit && (
             <div>

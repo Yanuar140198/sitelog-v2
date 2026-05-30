@@ -85,6 +85,7 @@ export default function MaintenancePage() {
               <div><Label>Repeat (days)</Label><Input type="number" value={form.intervalDays} onChange={e => set('intervalDays', e.target.value)} /></div>
               <div><Label>Repeat (HM)</Label><Input type="number" value={form.intervalHm} onChange={e => set('intervalHm', e.target.value)} /></div>
               <div className="col-span-2"><Label>Description</Label><Input value={form.description} onChange={e => set('description', e.target.value)} /></div>
+              {create.error && <div className="col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
               <div className="col-span-2 flex gap-2 mt-2">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>

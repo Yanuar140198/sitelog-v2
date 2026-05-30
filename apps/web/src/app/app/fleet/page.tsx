@@ -88,7 +88,8 @@ export default function FleetPage() {
               <div><Label>Brand</Label><Input value={form.brand} onChange={e => set('brand', e.target.value)} /></div>
               <div><Label>Model</Label><Input value={form.model} onChange={e => set('model', e.target.value)} /></div>
               <div><Label>Capacity</Label><Input value={form.capacity} onChange={e => set('capacity', e.target.value)} placeholder="30T" /></div>
-              <div><Label>Rate / Hour (Rp)</Label><Input type="number" value={form.ratePerHour} onChange={e => set('ratePerHour', e.target.value)} /></div>
+              <div><Label>Rate / Hour (Rp)</Label><Input type="number" value={form.ratePerHour} onChange={e => set('ratePerHour', Number(e.target.value))} /></div>
+              {create.error && <div className="col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
               <div className="col-span-2 flex gap-2 mt-3">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>
