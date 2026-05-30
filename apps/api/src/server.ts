@@ -16,6 +16,7 @@ import { createContext } from './context.js';
 import { resolveAuthSession, auth } from '@sitelog/auth';
 import { stripe } from './lib/stripe.js';
 import { safeEqual } from './lib/safe-compare.js';
+import { recordError } from './lib/error-log.js';
 import { db, subscription, organization } from '@sitelog/db';
 import { eq, sql } from 'drizzle-orm';
 
@@ -293,10 +294,54 @@ app.use('/api/trpc/*', trpcServer({
     const session = await resolveAuthSession(c.req.raw);
     return createContext({ req: c.req.raw, session });
   },
-  onError: ({ error, path }) => {
+  onError: ({ error, path, type, ctx }) => {
     console.error(`[trpc] ${path}: ${error.code} ${error.message}`);
+    void recordError({
+      source: 'trpc',
+      level: error.code === 'INTERNAL_SERVER_ERROR' ? 'error' : 'warn',
+      message: `${error.code}: ${error.message}`,
+      stack: error.stack,
+      path: path ?? null,
+      method: type,
+      organizationId: (ctx as any)?.session?.organizationId ?? null,
+      userId: (ctx as any)?.session?.user?.id ?? null,
+    });
   },
 }));
+
+// Client-side error ingest (browser errors during use/QA). Public + rate-limited.
+app.post('/api/errors', async (c) => {
+  const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? c.req.header('x-real-ip') ?? 'unknown';
+  const { rateLimit } = await import('./lib/rate-limit.js');
+  if (!rateLimit({ id: `errlog:${ip}`, limit: 120, windowMs: 60_000 }).ok) {
+    return c.json({ ok: false }, 429);
+  }
+  let body: any = {};
+  try { body = await c.req.json(); } catch { /* ignore */ }
+  await recordError({
+    source: 'client',
+    level: typeof body.level === 'string' ? body.level : 'error',
+    message: String(body.message ?? 'client error'),
+    stack: body.stack,
+    path: body.path,
+    url: body.url ?? c.req.header('referer'),
+    userAgent: c.req.header('user-agent'),
+    requestId: c.req.header('x-request-id'),
+    context: body.context,
+  });
+  return c.json({ ok: true });
+});
+
+// Catch-all for unhandled server exceptions.
+app.onError((e, c) => {
+  void recordError({
+    source: 'server', message: e.message, stack: e.stack,
+    path: c.req.path, method: c.req.method, status: 500, url: c.req.url,
+    userAgent: c.req.header('user-agent'),
+    requestId: String(c.get('requestId' as never) ?? ''),
+  });
+  return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500);
+});
 
 const port = Number(process.env.PORT ?? 4000);
 console.log(`[api] listening on http://localhost:${port}`);
