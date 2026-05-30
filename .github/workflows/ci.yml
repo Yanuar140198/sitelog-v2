@@ -29,7 +29,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sitelog
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - uses: oven-sh/setup-bun@v2
@@ -62,7 +62,7 @@ jobs:
       SITELOG_ADMIN_EMAILS: demo@sitelog.local
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - uses: oven-sh/setup-bun@v2
