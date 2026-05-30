@@ -10,7 +10,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/emails/package.json ./packages/emails/
-RUN bun install --frozen-lockfile --production=false
+RUN bun install
 
 FROM oven/bun:1.3-alpine AS build
 WORKDIR /app
