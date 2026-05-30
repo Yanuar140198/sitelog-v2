@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
 
+// Public API origin — baked into the client bundle (browser auth client, CSP).
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// Server-side rewrite target — reach the API directly (internal hostname) instead of
+// hair-pinning back out through the public URL. Falls back to the public URL.
+const API_INTERNAL = process.env.API_INTERNAL_URL ?? API_URL;
 
 const config: NextConfig = {
   transpilePackages: ['@sitelog/api', '@sitelog/api-client', '@sitelog/auth', '@sitelog/db'],
@@ -16,9 +20,9 @@ const config: NextConfig = {
   },
   async rewrites() {
     return [
-      { source: '/api/trpc/:path*', destination: `${API_URL}/api/trpc/:path*` },
-      { source: '/api/auth/:path*', destination: `${API_URL}/api/auth/:path*` },
-      { source: '/api/webhooks/:path*', destination: `${API_URL}/api/webhooks/:path*` },
+      { source: '/api/trpc/:path*', destination: `${API_INTERNAL}/api/trpc/:path*` },
+      { source: '/api/auth/:path*', destination: `${API_INTERNAL}/api/auth/:path*` },
+      { source: '/api/webhooks/:path*', destination: `${API_INTERNAL}/api/webhooks/:path*` },
     ];
   },
   async headers() {
