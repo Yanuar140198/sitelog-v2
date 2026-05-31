@@ -8,14 +8,11 @@ const API_INTERNAL = process.env.API_INTERNAL_URL ?? API_URL;
 
 const config: NextConfig = {
   transpilePackages: ['@sitelog/api', '@sitelog/api-client', '@sitelog/auth', '@sitelog/db', '@sitelog/shared'],
-  // Workspace packages use `.js`-extension imports in TS source (ESM bundler style);
-  // let webpack resolve those to the .ts/.tsx files.
-  webpack: (config) => {
-    config.resolve.extensionAlias = {
-      ...(config.resolve.extensionAlias ?? {}),
-      '.js': ['.ts', '.tsx', '.js', '.jsx'],
-    };
-    return config;
+  // Workspace packages use `.js`-extension imports in TS source (ESM bundler style).
+  // Next 16 defaults to Turbopack for `next build`; resolve those extensions natively
+  // (replaces the old webpack extensionAlias hook, which Turbopack rejects).
+  turbopack: {
+    resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '.mjs'],
   },
   typedRoutes: true,
   experimental: {

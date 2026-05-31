@@ -25,14 +25,14 @@
     "@sitelog/emails": "workspace:*",
     "@sitelog/shared": "workspace:*",
     "@trpc/server": "^11.0.0-rc.682",
-    "drizzle-orm": "^0.38.2",
+    "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "hono": "^4.6.14",
     "resend": "^4.0.1",
     "stripe": "^17.5.0",
     "superjson": "^2.2.2",
     "ulid": "^2.3.0",
-    "zod": "^3.24.1"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "^1.1.14",
