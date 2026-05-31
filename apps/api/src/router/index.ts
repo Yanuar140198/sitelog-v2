@@ -38,6 +38,8 @@ import { subcontractorRouter } from './subcontractor.js';
 import { variationOrderRouter } from './variation-order.js';
 import { qcRouter } from './qc.js';
 import { weatherRouter } from './weather.js';
+import { aiRouter } from './ai.js';
+import { errorLogRouter } from './error-log.js';
 
 export const appRouter = router({
   org: orgRouter,
@@ -79,6 +81,8 @@ export const appRouter = router({
   variationOrder: variationOrderRouter,
   qc: qcRouter,
   weather: weatherRouter,
+  ai: aiRouter,
+  errorLog: errorLogRouter,
 });
 
 export type AppRouter = typeof appRouter;

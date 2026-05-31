@@ -19,3 +19,4 @@ export * from './variation-order';
 export * from './subcontractor';
 export * from './weather';
 export * from './crew';
+export * from './observability';

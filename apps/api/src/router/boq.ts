@@ -20,12 +20,21 @@ import { computeAhspRate } from '../lib/ahsp-rate.js';
 
 const N = (v: unknown) => Number(v ?? 0);
 
+/** Throw NOT_FOUND unless the project belongs to the caller's org (tenant isolation). */
+async function assertProjectInOrg(ctx: any, projectId: string) {
+  const [p] = await ctx.db.select({ id: project.id }).from(project)
+    .where(and(eq(project.id, projectId), eq(project.organizationId, ctx.session.organizationId)))
+    .limit(1);
+  if (!p) throw new TRPCError({ code: 'NOT_FOUND' });
+}
+
 interface ResolvedResourceLine {
   category: 'tenaga' | 'bahan' | 'peralatan';
   resourceCode: string;
   uraian: string;
   koefisien: number;
   koefisienOrig: number;
+  formula: string | null;
   hsd: number;
   hsdOrig: number;
   total: number;
@@ -89,6 +98,7 @@ async function resolveRates(
         uraian: r.uraian,
         koefisien: koef,
         koefisienOrig: koefOrig,
+        formula: ov.koef != null ? null : (r.formula ?? null),
         hsd,
         hsdOrig,
         total: koef * hsd,
@@ -242,6 +252,12 @@ export const boqRouter = router({
   remove: requireRole('owner', 'admin', 'estimator')
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify the item's project belongs to the org before deleting (tenant isolation).
+      const [item] = await ctx.db.select({ id: boqItem.id }).from(boqItem)
+        .innerJoin(project, eq(project.id, boqItem.projectId))
+        .where(and(eq(boqItem.id, input.id), eq(project.organizationId, ctx.session.organizationId)))
+        .limit(1);
+      if (!item) throw new TRPCError({ code: 'NOT_FOUND' });
       await ctx.db.delete(boqItem).where(eq(boqItem.id, input.id));
       await audit(ctx, { action: 'boq.delete', resource: 'boq_item', resourceId: input.id });
       return { ok: true };
@@ -337,6 +353,7 @@ export const boqRouter = router({
       if (kodeCol < 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Could not find kode column' });
       if (qtyCol < 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Could not find quantity column' });
 
+      await assertProjectInOrg(ctx, input.projectId);
       if (input.replaceExisting) {
         await ctx.db.delete(boqItem).where(eq(boqItem.projectId, input.projectId));
       }
@@ -379,6 +396,7 @@ export const boqRouter = router({
       note: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      await assertProjectInOrg(ctx, input.projectId);
       const existing = await ctx.db.select().from(boqResourceOverride)
         .where(and(
           eq(boqResourceOverride.projectId, input.projectId),
@@ -413,6 +431,7 @@ export const boqRouter = router({
       resourceCode: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
+      await assertProjectInOrg(ctx, input.projectId);
       await ctx.db.delete(boqResourceOverride).where(and(
         eq(boqResourceOverride.projectId, input.projectId),
         eq(boqResourceOverride.ahspItemId, input.ahspItemId),

@@ -65,15 +65,15 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
   };
 
   return (
-    <div className="space-y-8 p-6 bg-[var(--color-canvas)] min-h-screen">
+    <div className="space-y-8 p-4 md:p-6 bg-[var(--color-canvas)] min-h-screen">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">SCHEDULE · {proj.code}</p>
-        <h1 className="font-display text-4xl font-bold mt-1">{proj.name}</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold mt-1">{proj.name}</h1>
         <p className="font-mono text-xs text-neutral-600 mt-2">
           {proj.startDate ?? '—'} → {proj.finishDate ?? '—'}
           {proj.baselineSetAt && <> · baseline locked {new Date(proj.baselineSetAt).toLocaleDateString()}</>}
         </p>
-        <div className="flex gap-2 mt-3 print-hide no-print">
+        <div className="flex flex-wrap gap-2 mt-3 print-hide no-print">
           <button
             onClick={() => window.print()}
             className="bg-[var(--color-ink)] hover:bg-[var(--color-brand)] text-white px-4 py-2 font-mono text-[10px] font-bold tracking-wider"
@@ -131,7 +131,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
           <p className="font-mono text-xs text-neutral-700">
             Snapshot current <strong>planned dates</strong> as new baseline. Compare future drift against this lock.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               value={baselineName} onChange={e => setBaselineName(e.target.value)}
               placeholder="Baseline name (e.g. 'BL01 — Owner Approved 2026-05')"
@@ -155,7 +155,8 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
             </button>
           </div>
           {baselines.data && baselines.data.length > 0 && (
-            <table className="w-full font-mono text-xs mt-4">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] font-mono text-xs mt-4">
               <thead className="text-neutral-500"><tr>
                 <th className="text-left py-1">NAME</th>
                 <th className="text-left">NOTES</th>
@@ -184,6 +185,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </section>

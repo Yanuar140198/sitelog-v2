@@ -19,13 +19,13 @@ export default function ProjectsPage() {
     else setSelected(new Set((projects.data ?? []).map(p => p.id)));
   }
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">CATALOG</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Projects</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Projects</h1>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           {selected.size > 0 && (
             <>
               <span className="font-mono text-xs text-neutral-600">{selected.size} selected</span>

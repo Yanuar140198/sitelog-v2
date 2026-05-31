@@ -15,6 +15,8 @@ import { appRouter } from './router/index.js';
 import { createContext } from './context.js';
 import { resolveAuthSession, auth } from '@sitelog/auth';
 import { stripe } from './lib/stripe.js';
+import { safeEqual } from './lib/safe-compare.js';
+import { recordError } from './lib/error-log.js';
 import { db, subscription, organization } from '@sitelog/db';
 import { eq, sql } from 'drizzle-orm';
 
@@ -47,8 +49,13 @@ app.use('*', async (c, next) => {
   else if (path.startsWith('/api/v1/')) bump('rest_calls_total');
 });
 
+// Reflect credentials only for explicitly-trusted origins. Echoing an arbitrary
+// Origin together with credentials:true lets any site make authenticated
+// cross-origin requests with the victim's cookies (CSRF / credential theft).
+const allowedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? 'http://localhost:3000,http://localhost:4000')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 app.use('*', cors({
-  origin: (origin) => origin ?? 'http://localhost:3000',
+  origin: (origin) => (origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0]),
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Org-Id', 'Cookie'],
@@ -108,7 +115,7 @@ app.get('/metrics', async (c) => {
   const token = process.env.METRICS_TOKEN;
   if (token) {
     const auth = c.req.header('authorization');
-    if (auth !== `Bearer ${token}`) return c.text('Unauthorized', 401);
+    if (!auth || !safeEqual(auth, `Bearer ${token}`)) return c.text('Unauthorized', 401);
   }
   const { renderMetrics } = await import('./metrics.js');
   const body = await renderMetrics();
@@ -156,7 +163,7 @@ app.get('/status', async (c) => {
 /** Idempotency-key prune cron — every hour, removes keys older than 24h. */
 app.post('/api/cron/prune-idempotency', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const r: any = await db.execute(sql`
@@ -170,7 +177,7 @@ app.post('/api/cron/prune-idempotency', async (c) => {
  *  Guard with CRON_SECRET header. */
 app.post('/api/cron/meters-report', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const { reportAllOrgMeters } = await import('./lib/meters.js');
@@ -181,7 +188,7 @@ app.post('/api/cron/meters-report', async (c) => {
 /** Audit retention cron — call daily. Prunes audit > 365 days, webhook_delivery > 30 days. */
 app.post('/api/cron/prune-audit', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const { pruneAuditLog } = await import('./lib/retention.js');
@@ -193,7 +200,7 @@ app.post('/api/cron/prune-audit', async (c) => {
 /** Webhook delivery retry cron — call every 5min via scheduler. */
 app.post('/api/cron/webhook-retry', async (c) => {
   const secret = c.req.header('x-cron-secret');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || !safeEqual(secret ?? '', process.env.CRON_SECRET)) {
     return c.json({ ok: false, error: 'forbidden' }, 403);
   }
   const { retryFailedDeliveries } = await import('./lib/webhook-retry.js');
@@ -287,10 +294,59 @@ app.use('/api/trpc/*', trpcServer({
     const session = await resolveAuthSession(c.req.raw);
     return createContext({ req: c.req.raw, session });
   },
-  onError: ({ error, path }) => {
+  onError: ({ error, path, type, ctx }) => {
     console.error(`[trpc] ${path}: ${error.code} ${error.message}`);
+    // Skip expected auth/flow errors (they fire on every unauthenticated request);
+    // log real failures so QA/testing surfaces them.
+    const EXPECTED = new Set(['UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND']);
+    if (!EXPECTED.has(error.code)) {
+      void recordError({
+        source: 'trpc',
+        level: error.code === 'INTERNAL_SERVER_ERROR' ? 'error' : 'warn',
+        message: `${error.code}: ${error.message}`,
+        stack: error.stack,
+        path: path ?? null,
+        method: type,
+        organizationId: (ctx as any)?.session?.organizationId ?? null,
+        userId: (ctx as any)?.session?.user?.id ?? null,
+      });
+    }
   },
 }));
+
+// Client-side error ingest (browser errors during use/QA). Public + rate-limited.
+app.post('/api/errors', async (c) => {
+  const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? c.req.header('x-real-ip') ?? 'unknown';
+  const { rateLimit } = await import('./lib/rate-limit.js');
+  if (!rateLimit({ id: `errlog:${ip}`, limit: 120, windowMs: 60_000 }).ok) {
+    return c.json({ ok: false }, 429);
+  }
+  let body: any = {};
+  try { body = await c.req.json(); } catch { /* ignore */ }
+  await recordError({
+    source: 'client',
+    level: typeof body.level === 'string' ? body.level : 'error',
+    message: String(body.message ?? 'client error'),
+    stack: body.stack,
+    path: body.path,
+    url: body.url ?? c.req.header('referer'),
+    userAgent: c.req.header('user-agent'),
+    requestId: c.req.header('x-request-id'),
+    context: body.context,
+  });
+  return c.json({ ok: true });
+});
+
+// Catch-all for unhandled server exceptions.
+app.onError((e, c) => {
+  void recordError({
+    source: 'server', message: e.message, stack: e.stack,
+    path: c.req.path, method: c.req.method, status: 500, url: c.req.url,
+    userAgent: c.req.header('user-agent'),
+    requestId: String(c.get('requestId' as never) ?? ''),
+  });
+  return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500);
+});
 
 const port = Number(process.env.PORT ?? 4000);
 console.log(`[api] listening on http://localhost:${port}`);

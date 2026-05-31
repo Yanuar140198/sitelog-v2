@@ -1,12 +1,18 @@
 import { test, expect, request } from '@playwright/test';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 /**
  * REST API v1 contract tests — runs against live API server with seeded demo data.
- * Skips if SITELOG_API_KEY env not provided.
+ * Key resolved from SITELOG_API_KEY env, else from e2e/.api-key (minted by global-setup.ts).
+ * Skips only when neither is present.
  */
 
 const API_BASE = process.env.SITELOG_API_BASE ?? 'http://localhost:4000';
-const API_KEY = process.env.SITELOG_API_KEY;
+const KEY_FILE = join(dirname(fileURLToPath(import.meta.url)), '.api-key');
+const API_KEY = process.env.SITELOG_API_KEY
+  ?? (existsSync(KEY_FILE) ? readFileSync(KEY_FILE, 'utf8').trim() : undefined);
 
 test.describe('REST API v1', () => {
   test.skip(!API_KEY, 'SITELOG_API_KEY not set');

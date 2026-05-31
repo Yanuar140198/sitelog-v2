@@ -62,14 +62,14 @@ export default function AhspImportPage() {
   const result = importMut.data;
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
+    <div className="p-4 md:p-8 max-w-3xl space-y-6">
       <Link href="/app/ahsp" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
         <ArrowLeft size={14} /> AHSP CATALOG
       </Link>
 
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">IMPORT</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Import AHSP from Excel</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Import AHSP from Excel</h1>
         <p className="font-mono text-xs text-neutral-500 mt-2">
           Bulk-upsert resources + AHSP items from a Bina Marga-style workbook.
         </p>

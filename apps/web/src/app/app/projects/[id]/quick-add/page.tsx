@@ -121,9 +121,9 @@ export default function QuickAddPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)]">
+    <div className="flex flex-col md:h-[calc(100vh-56px)]">
       {/* Header */}
-      <div className="px-4 py-3 bg-white border-b-2 border-[var(--color-ink)] flex items-center justify-between">
+      <div className="px-4 py-3 bg-white border-b-2 border-[var(--color-ink)] flex items-center justify-between flex-wrap gap-2">
         <div>
           <div className="font-mono text-[10px] tracking-wider text-[var(--color-brand)] font-bold">
             {project.data?.code} · QUICK ADD
@@ -140,7 +140,7 @@ export default function QuickAddPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {/* Filter bar */}
-      <div className="px-4 py-2 bg-neutral-50 border-b-2 border-[var(--color-ink)] flex items-center gap-2">
+      <div className="px-4 py-2 bg-neutral-50 border-b-2 border-[var(--color-ink)] flex items-center gap-2 flex-wrap">
         <div>
           <Label className="text-[9px]">SECTION</Label>
           <select value={section} onChange={e => setSection(e.target.value)}
@@ -164,9 +164,9 @@ export default function QuickAddPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {/* Two-pane content */}
-      <div className="grid grid-cols-[1fr_460px] flex-1 overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_460px] flex-1 md:overflow-hidden">
         {/* Left: catalog */}
-        <div className="bg-white border-r-2 border-[var(--color-ink)] overflow-auto">
+        <div className="bg-white border-b-2 md:border-b-0 md:border-r-2 border-[var(--color-ink)] overflow-auto max-h-[50vh] md:max-h-none">
           {grouped.size === 0 ? (
             <div className="p-8 text-center font-mono text-xs text-neutral-500">
               No items match filters.

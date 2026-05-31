@@ -43,7 +43,7 @@ export function TemplateBrowser({ projectId, onClose }: { projectId: string; onC
           ) : (
             <form onSubmit={e => { e.preventDefault(); save.mutate({ projectId, name, description, category }); }} className="space-y-2">
               <div><Label>Name *</Label><Input required value={name} onChange={e => setName(e.target.value)} placeholder="Mining DT Standard Setup" /></div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div><Label>Category</Label><Input value={category} onChange={e => setCategory(e.target.value)} placeholder="mining" /></div>
                 <div><Label>Description</Label><Input value={description} onChange={e => setDescription(e.target.value)} /></div>
               </div>

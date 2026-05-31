@@ -168,7 +168,7 @@ export default function AhspPrintPage({ params }: { params: Promise<{ id: string
 function CatGroup({ letter, title, rows, subtotal }: {
   letter: string;
   title: string;
-  rows: { id: string; code: string; uraian: string; satuan: string | null; koefisien: number; hsd: number; subtotal: number }[];
+  rows: { id: string; code: string; uraian: string; satuan: string | null; koefisien: number; formula?: string | null; hsd: number; subtotal: number }[];
   subtotal: number;
 }) {
   return (
@@ -188,7 +188,10 @@ function CatGroup({ letter, title, rows, subtotal }: {
           <td className="code">{r.code}</td>
           <td>{r.uraian}</td>
           <td>{r.satuan ?? '—'}</td>
-          <td className="num">{r.koefisien.toLocaleString('id-ID', { maximumFractionDigits: 6 })}</td>
+          <td className="num">
+            {r.koefisien.toLocaleString('id-ID', { maximumFractionDigits: 6 })}
+            {r.formula ? <div className="formula">= {r.formula}</div> : null}
+          </td>
           <td className="num">{fmtIDR(r.hsd)}</td>
           <td className="num">{fmtIDR(r.subtotal)}</td>
         </tr>

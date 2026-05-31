@@ -13,7 +13,7 @@ export default function SuperAdminUsers() {
     <div className="space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">PLATFORM</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Users</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Users</h1>
         <p className="font-mono text-xs text-white/60 mt-2">Search by email or name (case-insensitive). Last 50 matches.</p>
       </div>
 
@@ -24,7 +24,8 @@ export default function SuperAdminUsers() {
         className="w-full bg-black border-2 border-white/30 px-4 py-3 font-mono text-sm text-white placeholder-white/40"
       />
 
-      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50 min-w-[720px]">
         <thead className="bg-[var(--color-brand)]">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">EMAIL</th>
@@ -59,6 +60,7 @@ export default function SuperAdminUsers() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

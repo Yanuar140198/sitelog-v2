@@ -28,8 +28,8 @@ export default function ProjectSubcontractorsPage({ params }: { params: Promise<
   const [showContract, setShowContract] = useState(false);
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-neutral-50 p-6 space-y-6">
-      <header className="flex items-center justify-between">
+    <div className="min-h-[calc(100vh-56px)] bg-neutral-50 p-4 md:p-6 space-y-6">
+      <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <Link href={`/app/projects/${projectId}`} className="font-mono text-[10px] tracking-wider text-[var(--color-brand)] hover:underline">
             ← BACK TO BOQ
@@ -56,7 +56,7 @@ export default function ProjectSubcontractorsPage({ params }: { params: Promise<
         </div>
       )}
 
-      <section className="grid grid-cols-4 gap-3">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <SummaryCard label="TOTAL CONTRACT VALUE" value={fmtIDR(summary.data?.totalContractValue ?? 0)} highlight />
         <SummaryCard label="TOTAL INVOICED" value={fmtIDR(summary.data?.totalInvoiced ?? 0)} />
         <SummaryCard label="TOTAL PAID" value={fmtIDR(summary.data?.totalPaid ?? 0)} />
@@ -134,10 +134,10 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
   return (
     <div className="bg-white border-2 border-[var(--color-ink)]">
       <div
-        className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex items-center justify-between cursor-pointer"
+        className="p-3 border-b-2 border-[var(--color-ink)] bg-neutral-50 flex items-center justify-between gap-3 flex-wrap cursor-pointer"
         onClick={() => setOpen(!open)}
       >
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <div className="flex-1">
             <div className="flex items-center gap-2">
@@ -151,7 +151,7 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
             <div className="font-mono text-[11px] text-neutral-600 mt-0.5">{contract.scopeDescription}</div>
           </div>
         </div>
-        <div className="flex items-center gap-6 font-mono text-xs">
+        <div className="flex items-center gap-4 sm:gap-6 font-mono text-xs">
           <div className="text-right">
             <div className="text-[10px] text-neutral-500 tracking-wider">VALUE</div>
             <div className="font-bold">{fmtIDR(value)}</div>
@@ -169,8 +169,8 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
 
       {open && (
         <div className="p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="font-mono text-[11px] text-neutral-600 flex gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="font-mono text-[11px] text-neutral-600 flex flex-wrap gap-4">
               {contract.startDate && <span>START: <strong>{contract.startDate}</strong></span>}
               {contract.endDate && <span>END: <strong>{contract.endDate}</strong></span>}
               <span>RETENTION: <strong>{Number(contract.retentionPct).toFixed(1)}%</strong></span>
@@ -186,7 +186,8 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
               No invoices submitted yet.
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-2 py-1.5 tracking-wider">NUMBER</th>
@@ -245,6 +246,7 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -317,7 +319,7 @@ function ContractModal({ projectId, subcontractors, onClose }: {
             {subcontractors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Contract Number"><Input value={form.contractNumber} onChange={e => setForm({ ...form, contractNumber: e.target.value })} placeholder="SPK-2026-001" /></Field>
           <Field label="Signed At"><Input type="date" value={form.signedAt} onChange={e => setForm({ ...form, signedAt: e.target.value })} /></Field>
         </div>
@@ -331,7 +333,7 @@ function ContractModal({ projectId, subcontractors, onClose }: {
             placeholder="e.g. Pengeboran soil investigation 5 titik @ 30m"
           />
         </Field>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Contract Value (Rp)"><Input type="number" step="any" value={form.contractValue} onChange={e => setForm({ ...form, contractValue: Number(e.target.value) })} /></Field>
           <Field label="Start Date"><Input type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} /></Field>
           <Field label="End Date"><Input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} /></Field>
@@ -397,7 +399,7 @@ function InvoiceModal({ contract, projectId, onClose }: { contract: any; project
           });
         }}
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Invoice Number *"><Input required value={form.invoiceNumber} onChange={e => setForm({ ...form, invoiceNumber: e.target.value })} placeholder="INV-001/2026" /></Field>
           <Field label="Invoice Date *"><Input type="date" required value={form.invoiceDate} onChange={e => setForm({ ...form, invoiceDate: e.target.value })} /></Field>
         </div>

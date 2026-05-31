@@ -24,11 +24,11 @@ export default function MaintenancePage() {
   const planned = (upcoming.data ?? []).filter(r => !overdue.includes(r));
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-wrap gap-2 items-end justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">FLEET</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Maintenance Schedule</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Maintenance Schedule</h1>
           <p className="font-mono text-xs text-neutral-500 mt-2">
             {overdue.length} overdue · {planned.length} upcoming (60 days)
           </p>
@@ -49,9 +49,9 @@ export default function MaintenancePage() {
       </Section>
 
       {show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
           onClick={e => { if (e.target === e.currentTarget) setShow(false); }}>
-          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-lg w-full shadow-[8px_8px_0_var(--color-brand)]">
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
             <h2 className="font-display text-2xl font-bold mb-4">Schedule Maintenance</h2>
             <form onSubmit={e => {
               e.preventDefault();
@@ -63,8 +63,8 @@ export default function MaintenancePage() {
                 intervalDays: form.intervalDays ? Number(form.intervalDays) : undefined,
                 intervalHm: form.intervalHm ? Number(form.intervalHm) : undefined,
               });
-            }} className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
+            }} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
                 <Label>Unit *</Label>
                 <select required value={form.unitId} onChange={e => set('unitId', e.target.value)}
                   className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
@@ -84,8 +84,9 @@ export default function MaintenancePage() {
               <div><Label>Due HM</Label><Input type="number" value={form.dueAtHm} onChange={e => set('dueAtHm', e.target.value)} placeholder="5000" /></div>
               <div><Label>Repeat (days)</Label><Input type="number" value={form.intervalDays} onChange={e => set('intervalDays', e.target.value)} /></div>
               <div><Label>Repeat (HM)</Label><Input type="number" value={form.intervalHm} onChange={e => set('intervalHm', e.target.value)} /></div>
-              <div className="col-span-2"><Label>Description</Label><Input value={form.description} onChange={e => set('description', e.target.value)} /></div>
-              <div className="col-span-2 flex gap-2 mt-2">
+              <div className="sm:col-span-2"><Label>Description</Label><Input value={form.description} onChange={e => set('description', e.target.value)} /></div>
+              {create.error && <div className="sm:col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
+              <div className="sm:col-span-2 flex gap-2 mt-2">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>
               </div>
@@ -108,7 +109,8 @@ function Section({ title, severity, children }: { title: string; severity: 'red'
 
 function Table({ rows, onComplete, onCancel }: { rows: any[]; onComplete: (id: string, hm?: number, cost?: number) => void; onCancel: (id: string) => void }) {
   return (
-    <table className="w-full font-mono text-xs">
+    <div className="overflow-x-auto">
+    <table className="w-full font-mono text-xs min-w-[560px]">
       <thead className="bg-neutral-100">
         <tr>
           <th className="text-left px-3 py-2">UNIT</th>
@@ -138,5 +140,6 @@ function Table({ rows, onComplete, onCancel }: { rows: any[]; onComplete: (id: s
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

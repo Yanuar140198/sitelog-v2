@@ -94,7 +94,8 @@ export const dashboardRouter = router({
       .where(eq(project.organizationId, ctx.session.organizationId));
     if (!projects.length) return [];
     const projectIds = projects.map(p => p.id);
-    const idList = sql.raw('(' + projectIds.map(id => `'${id}'`).join(',') + ')');
+    // Parameterized id list (avoid sql.raw string interpolation).
+    const idList = sql`(${sql.join(projectIds.map((id) => sql`${id}`), sql`, `)})`;
 
     // BOQ subtotal per project (plan value)
     const boqRows = await ctx.db.execute(sql`

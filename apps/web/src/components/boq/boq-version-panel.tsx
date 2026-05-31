@@ -85,7 +85,7 @@ export function BoqVersionPanel({ projectId, onClose }: { projectId: string; onC
                 <span className="text-orange-700">~ {diff.data.counts.changed} changed</span>
                 <span className="text-neutral-500">= {diff.data.counts.same} same</span>
               </div>
-              <div className="mb-3 grid grid-cols-3 gap-2 font-mono text-xs bg-white border border-[var(--color-ink)] p-2">
+              <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-xs bg-white border border-[var(--color-ink)] p-2">
                 <div><div className="text-[9px] text-neutral-500">A SUBTOTAL</div><div className="font-bold">Rp {diff.data.totals.subtotalA.toLocaleString('id-ID')}</div></div>
                 <div><div className="text-[9px] text-neutral-500">B SUBTOTAL</div><div className="font-bold">Rp {diff.data.totals.subtotalB.toLocaleString('id-ID')}</div></div>
                 <div><div className="text-[9px] text-neutral-500">DELTA</div>
@@ -94,7 +94,8 @@ export function BoqVersionPanel({ projectId, onClose }: { projectId: string; onC
                   </div>
                 </div>
               </div>
-              <table className="w-full font-mono text-[10px]">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] font-mono text-[10px]">
                 <thead><tr className="border-b border-neutral-300">
                   <th className="text-left px-1 py-1">STATUS</th>
                   <th className="text-left px-1 py-1">AHSP ID</th>
@@ -116,6 +117,7 @@ export function BoqVersionPanel({ projectId, onClose }: { projectId: string; onC
                   </tr>
                 ))}</tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationBell } from './notification-bell';
+import { MobileNav } from './mobile-nav';
 
 export function Topbar() {
   const router = useRouter();
@@ -19,15 +20,17 @@ export function Topbar() {
   }
 
   return (
-    <header className="col-start-2 h-14 bg-white border-b-2 border-[var(--color-ink)] flex items-center justify-between px-6">
-      <div className="flex items-center gap-3">
+    <header className="md:col-start-2 h-14 bg-white border-b-2 border-[var(--color-ink)] flex items-center justify-between gap-2 px-4 md:px-6">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Hamburger + drawer (mobile only) */}
+        <MobileNav />
         {current.data && (
           <div className="relative">
             <button onClick={() => setOpen(!open)}
-              className="flex items-center gap-2 px-3 py-1.5 border-2 border-[var(--color-ink)] font-mono text-sm hover:bg-[var(--color-ink)] hover:text-white transition">
-              <span className="font-bold">{current.data.name}</span>
-              <span className="text-[10px] text-neutral-500 uppercase">{current.data.role}</span>
-              <ChevronDown size={14} />
+              className="flex items-center gap-2 px-3 py-1.5 border-2 border-[var(--color-ink)] font-mono text-sm hover:bg-[var(--color-ink)] hover:text-white transition max-w-[40vw] md:max-w-none">
+              <span className="font-bold truncate">{current.data.name}</span>
+              <span className="hidden sm:inline text-[10px] text-neutral-500 uppercase">{current.data.role}</span>
+              <ChevronDown size={14} className="shrink-0" />
             </button>
             {open && (
               <div className="absolute top-full left-0 mt-1 w-64 bg-white border-2 border-[var(--color-ink)] shadow-[4px_4px_0_var(--color-ink)] z-50">
@@ -43,9 +46,9 @@ export function Topbar() {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         <NotificationBell />
-        <div className="font-mono text-xs text-neutral-600">{session?.user?.email}</div>
+        <div className="hidden md:block font-mono text-xs text-neutral-600">{session?.user?.email}</div>
         <button
           onClick={async () => { await signOut(); router.push('/login'); }}
           className="p-2 hover:bg-neutral-100" title="Sign out">

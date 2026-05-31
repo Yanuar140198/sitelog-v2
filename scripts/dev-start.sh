@@ -24,8 +24,9 @@ elif ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   sleep 3
 fi
 
-echo "[dev-start] Applying migrations..."
-DATABASE_URL="${DB_URL}" pnpm --filter @sitelog/db migrate
+echo "[dev-start] Applying schema + seed..."
+docker exec -i ${CONTAINER} psql -U postgres -d sitelog -v ON_ERROR_STOP=1 -f - < packages/db/schema.sql
+docker exec -i ${CONTAINER} psql -U postgres -d sitelog -v ON_ERROR_STOP=1 -f - < packages/db/seed.sql
 
 cat <<EOF
 

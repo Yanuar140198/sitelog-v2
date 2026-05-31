@@ -31,7 +31,7 @@ export default function WebhooksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-wrap gap-2 justify-between items-end">
         <p className="font-mono text-xs text-neutral-600">Outgoing webhooks dispatched on org events. Payload signed with HMAC-SHA256.</p>
         <Button variant="primary" onClick={() => setShow(true)}><Plus size={14} /> NEW WEBHOOK</Button>
       </div>
@@ -47,7 +47,8 @@ export default function WebhooksPage() {
         </div>
       )}
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">URL</th>
@@ -82,14 +83,16 @@ export default function WebhooksPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {historyFor && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
           onClick={e => { if (e.target === e.currentTarget) setHistoryFor(null); }}>
-          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-3xl w-full shadow-[8px_8px_0_var(--color-brand)]">
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
             <h2 className="font-display text-2xl font-bold mb-1">Delivery History</h2>
             <p className="font-mono text-xs text-neutral-500 mb-4">Last 20 attempts. 2xx = delivered, anything else = retry queued.</p>
-            <table className="w-full font-mono text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full font-mono text-xs min-w-[560px]">
               <thead><tr className="text-neutral-500 border-b border-neutral-200">
                 <th className="text-left py-1">TIME</th>
                 <th className="text-left">EVENT</th>
@@ -114,6 +117,7 @@ export default function WebhooksPage() {
                 )}
               </tbody>
             </table>
+            </div>
             <div className="mt-4 text-right">
               <Button type="button" onClick={() => setHistoryFor(null)}>CLOSE</Button>
             </div>
@@ -122,9 +126,9 @@ export default function WebhooksPage() {
       )}
 
       {show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
           onClick={e => { if (e.target === e.currentTarget) setShow(false); }}>
-          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-lg w-full shadow-[8px_8px_0_var(--color-brand)]">
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
             <h2 className="font-display text-2xl font-bold mb-4">New Webhook</h2>
             <form onSubmit={e => { e.preventDefault(); create.mutate({ url, description: desc, events: events as any }); }}
               className="space-y-3">

@@ -93,7 +93,7 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
   return (
     <div className="min-h-[calc(100vh-56px)] bg-neutral-50">
       {/* Header */}
-      <header className="bg-white border-b-2 border-[var(--color-ink)] px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b-2 border-[var(--color-ink)] px-4 md:px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <Link href={`/app/projects/${id}`} className="p-2 border border-[var(--color-ink)] hover:bg-neutral-100">
             <ArrowLeft size={14} />
@@ -115,15 +115,15 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
       </header>
 
       {/* KPI cards */}
-      <section className="px-6 py-6 grid grid-cols-4 gap-4">
+      <section className="px-4 md:px-6 py-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">TOTAL TESTS</div>
-          <div className="font-display text-6xl font-bold mt-2">{total}</div>
+          <div className="font-display text-4xl md:text-6xl font-bold mt-2">{total}</div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">all-time recorded</div>
         </div>
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">PASS RATE</div>
-          <div className={`font-display text-6xl font-bold mt-2 ${passRateColor(passRate)}`}>
+          <div className={`font-display text-4xl md:text-6xl font-bold mt-2 ${passRateColor(passRate)}`}>
             {passRate == null ? '—' : `${passRate}%`}
           </div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">
@@ -132,18 +132,18 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
         </div>
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">PENDING</div>
-          <div className={`font-display text-6xl font-bold mt-2 ${pendingCount > 0 ? 'text-neutral-700' : 'text-neutral-400'}`}>{pendingCount}</div>
+          <div className={`font-display text-4xl md:text-6xl font-bold mt-2 ${pendingCount > 0 ? 'text-neutral-700' : 'text-neutral-400'}`}>{pendingCount}</div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">awaiting result</div>
         </div>
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">RETEST REQUIRED</div>
-          <div className={`font-display text-6xl font-bold mt-2 ${retestCount > 0 ? 'text-amber-600' : 'text-neutral-400'}`}>{retestCount}</div>
+          <div className={`font-display text-4xl md:text-6xl font-bold mt-2 ${retestCount > 0 ? 'text-amber-600' : 'text-neutral-400'}`}>{retestCount}</div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">re-sample needed</div>
         </div>
       </section>
 
       {/* Filter bar */}
-      <section className="px-6 pb-4">
+      <section className="px-4 md:px-6 pb-4">
         <div className="bg-white border-2 border-[var(--color-ink)] p-3 flex flex-wrap gap-3 items-end font-mono text-xs">
           <label className="flex flex-col">
             <span className="text-[10px] font-bold tracking-wider text-neutral-600 mb-1">TEST TYPE</span>
@@ -177,8 +177,8 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
       </section>
 
       {/* Table */}
-      <section className="px-6 pb-10">
-        <div className="bg-white border-2 border-[var(--color-ink)]">
+      <section className="px-4 md:px-6 pb-10">
+        <div className="bg-white border-2 border-[var(--color-ink)] overflow-x-auto">
           {!list.data?.length ? (
             <div className="p-16 text-center">
               <FlaskConical size={48} className="mx-auto text-[var(--color-brand)]" />
@@ -186,7 +186,7 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
               <p className="font-mono text-xs text-neutral-500 mt-2">Hit + NEW TEST to log a sand cone, slump, concrete cube or other lab/field test.</p>
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[1000px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-[100px]">DATE</th>
@@ -314,7 +314,7 @@ function NewTestModal({ projectId, seed, onClose, onSubmit, pending }: {
           </div>
         )}
         <div className="p-5 space-y-3 font-mono text-xs">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="DATE">
               <input type="date" value={form.testDate} onChange={e => setForm({ ...form, testDate: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
@@ -325,7 +325,7 @@ function NewTestModal({ projectId, seed, onClose, onSubmit, pending }: {
               </datalist>
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="STATION">
               <input value={form.station} onChange={e => setForm({ ...form, station: e.target.value })} placeholder="e.g. STA 0+200 RT" className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
@@ -336,7 +336,7 @@ function NewTestModal({ projectId, seed, onClose, onSubmit, pending }: {
           <Field label="SPEC TARGET">
             <input value={form.specTarget} onChange={e => setForm({ ...form, specTarget: e.target.value })} placeholder="e.g. MDD 95% or Slump 12±2 cm" className="w-full border border-[var(--color-ink)] px-2 py-1" />
           </Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="SPEC MIN">
               <input type="number" step="any" value={form.specMin} onChange={e => setForm({ ...form, specMin: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
@@ -347,7 +347,7 @@ function NewTestModal({ projectId, seed, onClose, onSubmit, pending }: {
               <input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="%, cm, mpa" className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="ACTUAL VALUE">
               <input type="number" step="any" value={form.actualValue} onChange={e => setForm({ ...form, actualValue: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>
@@ -479,7 +479,7 @@ function TestDrawer({ id, onClose, onRetest }: {
             {/* Update result inline */}
             <div className="border-t-2 border-[var(--color-ink)] pt-4">
               <div className="font-bold tracking-wider mb-2">UPDATE RESULT</div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <select value={editResult} onChange={e => setEditResult(e.target.value as ResultKey | '')} className="border border-[var(--color-ink)] px-2 py-1">
                   <option value="">— change to —</option>
                   {RESULTS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}

@@ -15,6 +15,7 @@
     "@sitelog/api-client": "workspace:*",
     "@sitelog/auth": "workspace:*",
     "@sitelog/db": "workspace:*",
+    "@sitelog/shared": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
     "@trpc/client": "^11.0.0-rc.682",
     "@trpc/react-query": "^11.0.0-rc.682",

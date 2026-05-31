@@ -22,20 +22,21 @@ export default function ProjectCrewPage({ params }: { params: Promise<{ id: stri
   const [showAssign, setShowAssign] = useState(false);
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
           <Link href={`/app/projects/${id}`} className="font-mono text-[10px] tracking-wider text-[var(--color-brand)] inline-flex items-center gap-1 hover:underline">
             <ArrowLeft size={11} /> BACK TO PROJECT
           </Link>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)] mt-1">{project.data?.code}</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Crew Assignments</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Crew Assignments</h1>
           <p className="font-mono text-xs text-neutral-500 mt-1">{project.data?.name}</p>
         </div>
         <Button variant="primary" onClick={() => setShowAssign(true)}><Plus size={14} /> ASSIGN CREW</Button>
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto border-2 border-[var(--color-ink)] bg-white">
+      <table className="w-full min-w-[640px] font-mono text-xs bg-white">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">NAME</th>
@@ -79,6 +80,7 @@ export default function ProjectCrewPage({ params }: { params: Promise<{ id: stri
           )}
         </tbody>
       </table>
+      </div>
 
       {showAssign && <AssignModal projectId={id} onClose={() => setShowAssign(false)} />}
     </div>
@@ -118,8 +120,8 @@ function AssignModal({ projectId, onClose }: { projectId: string; onClose: () =>
             dailyRateOverride: form.dailyRateOverride ? Number(form.dailyRateOverride) : undefined,
             notes: form.notes || undefined,
           });
-        }} className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
+        }} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
             <Label>Crew Member *</Label>
             <select required value={form.crewMemberId} onChange={e => set('crewMemberId', e.target.value)}
               className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
@@ -142,8 +144,8 @@ function AssignModal({ projectId, onClose }: { projectId: string; onClose: () =>
             </select>
           </div>
           <div><Label>Daily Rate Override (Rp)</Label><Input type="number" value={form.dailyRateOverride} onChange={e => set('dailyRateOverride', e.target.value)} placeholder="leave blank" /></div>
-          <div className="col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
-          <div className="col-span-2 flex gap-2 mt-3">
+          <div className="sm:col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
+          <div className="sm:col-span-2 flex gap-2 mt-3">
             <Button type="submit" variant="primary" disabled={assign.isPending || !form.crewMemberId}>ASSIGN</Button>
             <Button type="button" onClick={onClose}>CANCEL</Button>
           </div>

@@ -3,6 +3,7 @@ import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@sitelog/api-client/react';
+import { evalFormula } from '@sitelog/shared/formula';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fmtIDR } from '@/lib/utils';
@@ -13,6 +14,12 @@ import {
 
 const CATS = ['tenaga', 'bahan', 'peralatan'] as const;
 type Cat = typeof CATS[number];
+
+// Format a koefisien value the Indonesian way (comma decimals), up to 4 dp.
+function fmtKoef(n: number, maxDp = 4): string {
+  if (!Number.isFinite(n)) return '—';
+  return n.toLocaleString('id-ID', { maximumFractionDigits: maxDp });
+}
 const CAT_META: Record<Cat, { letter: string; title: string }> = {
   tenaga:    { letter: 'A', title: 'TENAGA KERJA' },
   bahan:     { letter: 'B', title: 'BAHAN' },
@@ -168,6 +175,7 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   const addResource = ahspMut.addResource?.useMutation(mkOpts('Resource added'));
   const updateResource = ahspMut.updateResource?.useMutation(mkOpts('Resource'));
   const deleteResource = ahspMut.deleteResource?.useMutation(mkOpts('Resource deleted'));
+  const resourceUpsert = ahspMut.resourceUpsert?.useMutation(mkOpts('Formula'));
   const addInput = ahspMut.addInput?.useMutation(mkOpts('Input added'));
   const updateInput = ahspMut.updateInput?.useMutation(mkOpts('Input'));
   const deleteInput = ahspMut.deleteInput?.useMutation(mkOpts('Input deleted'));
@@ -206,9 +214,19 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   if (!breakdown.data || !detail.data) {
     return <div className="p-8 font-mono text-sm">Loading...</div>;
   }
-  const { item, sections, totals, inputs } = breakdown.data;
+  const { item, sections, totals, inputs: breakdownInputs } = breakdown.data;
   const { resources, koefisien, inputs: rawInputs, item: rawItem } = detail.data;
   const isEditable = Boolean(rawItem.organizationId);
+
+  // Variables usable inside resource formulas, derived from the item's inputs.
+  // Only inputs with a non-empty `variable` and a numeric `nilai` participate.
+  const formulaVars: Record<string, number> = {};
+  for (const i of breakdownInputs ?? []) {
+    if (i.variable && i.nilai != null && Number.isFinite(Number(i.nilai))) {
+      formulaVars[i.variable] = Number(i.nilai);
+    }
+  }
+  const varEntries = Object.entries(formulaVars);
 
   // Prev/Next via catalog ordering
   const list = catalog.data ?? [];
@@ -230,12 +248,12 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   return (
-    <div className="p-8 max-w-6xl space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 max-w-6xl space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <Link href="/app/ahsp" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
           <ArrowLeft size={14} /> AHSP CATALOG
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <NavBtn disabled={!prevId} onClick={() => prevId && router.push(`/app/ahsp/${prevId}`)} icon={<ChevronLeft size={14} />} label="PREV" />
           <span className="font-mono text-xs text-neutral-400">
             {idx >= 0 ? `${idx + 1} / ${list.length}` : ''}
@@ -287,11 +305,11 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
           {item.kode}
           {item.deskripsi ? <span className="ml-3 text-neutral-400">· {item.deskripsi}</span> : null}
         </div>
-        <div className="flex items-start justify-between gap-4 mt-1">
-          <h1 className="font-display text-3xl font-bold flex-1 min-w-0">{item.jenis}</h1>
-          <div className="text-right shrink-0">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-2 sm:gap-4 mt-1">
+          <h1 className="font-display text-2xl md:text-3xl font-bold flex-1 min-w-0">{item.jenis}</h1>
+          <div className="text-left sm:text-right shrink-0">
             <div className="font-mono text-[10px] tracking-[0.2em] text-neutral-500">RATE PER {item.satuan}</div>
-            <div className="font-display text-3xl font-bold text-[var(--color-brand)] tabular-nums">
+            <div className="font-display text-2xl md:text-3xl font-bold text-[var(--color-brand)] tabular-nums">
               {fmtIDR(totals.unitRate)}
             </div>
           </div>
@@ -388,6 +406,9 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
         onFocusSection={() => { lastSectionRef.current = 'koef'; }}
       />
 
+      {/* FORMULA LEGEND — discoverability for the formula feature */}
+      {isEditable && <FormulaLegend varEntries={varEntries} />}
+
       {/* SECTIONS A / B / C */}
       {CATS.map(cat => (
         <CategoryBlock
@@ -401,9 +422,11 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
           editable={isEditable}
           editMode={editMode}
           rawRows={resources.filter(r => r.category === cat)}
+          formulaVars={formulaVars}
           addMut={addResource}
           updateMut={updateResource}
           deleteMut={deleteResource}
+          upsertMut={resourceUpsert}
           onDirty={bumpDirty}
           addSignal={addRequestRef.current.target === cat ? addNonce : 0}
           onFocusSection={() => { lastSectionRef.current = cat; }}
@@ -603,7 +626,8 @@ function InputsTable({
         )}
       </div>
       {rows.length > 0 ? (
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] font-mono text-xs">
           <thead className="bg-neutral-100">
             <tr>
               <th className="text-left px-3 py-1.5 w-24">KODE</th>
@@ -669,8 +693,10 @@ function InputsTable({
             )}
           </tbody>
         </table>
+        </div>
       ) : adding ? (
-        <table className="w-full font-mono text-xs"><tbody>
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] font-mono text-xs"><tbody>
           <InputRowAdd
             onCancel={() => setAdding(false)}
             onSave={async vals => {
@@ -680,6 +706,7 @@ function InputsTable({
             }}
           />
         </tbody></table>
+        </div>
       ) : (
         <div className="px-3 py-6 text-center text-neutral-400 font-mono text-xs">No inputs.</div>
       )}
@@ -837,7 +864,8 @@ function KoefTable({
         )}
       </div>
       {rows.length > 0 || adding ? (
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] font-mono text-xs">
           <thead className="bg-neutral-100">
             <tr>
               <th className="text-left px-3 py-1.5 w-24">KODE</th>
@@ -900,6 +928,7 @@ function KoefTable({
             )}
           </tbody>
         </table>
+        </div>
       ) : (
         <div className="px-3 py-6 text-center text-neutral-400 font-mono text-xs">No koefisien.</div>
       )}
@@ -1026,18 +1055,19 @@ type ResRow = {
 };
 
 function CategoryBlock({
-  cat, ahspItemId, letter, title, rows, subtotal, editable, editMode, rawRows, addMut, updateMut, deleteMut, onDirty, addSignal, onFocusSection,
+  cat, ahspItemId, letter, title, rows, subtotal, editable, editMode, rawRows, formulaVars, addMut, updateMut, deleteMut, upsertMut, onDirty, addSignal, onFocusSection,
 }: {
   cat: Cat;
   ahspItemId: string;
   letter: string;
   title: string;
-  rows: { id: string; code: string; uraian: string; satuan: string | null; koefisien: number; hsd: number; subtotal: number }[];
+  rows: { id: string; code: string; uraian: string; satuan: string | null; koefisien: number; formula: string | null; hsd: number; subtotal: number }[];
   subtotal: number;
   editable: boolean;
   editMode: boolean;
   rawRows: ResRow[];
-  addMut: any; updateMut: any; deleteMut: any;
+  formulaVars: Record<string, number>;
+  addMut: any; updateMut: any; deleteMut: any; upsertMut: any;
   onDirty: (delta: number) => void;
   addSignal: number;
   onFocusSection: () => void;
@@ -1045,6 +1075,8 @@ function CategoryBlock({
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const rawMap = useMemo(() => new Map(rawRows.map(r => [r.id, r])), [rawRows]);
+  // Map id -> formula from the breakdown (rawRows/ResRow don't carry formula).
+  const formulaMap = useMemo(() => new Map(rows.map(r => [r.id, r.formula])), [rows]);
 
   useEffect(() => {
     if (addSignal && editable) { setAdding(true); }
@@ -1064,7 +1096,8 @@ function CategoryBlock({
           </button>
         )}
       </div>
-      <table className="w-full font-mono text-xs">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] font-mono text-xs">
         <thead className="bg-neutral-100">
           <tr>
             <th className="text-left px-3 py-1.5 w-28">KODE</th>
@@ -1089,24 +1122,60 @@ function CategoryBlock({
                 <ResRowEdit
                   key={l.id}
                   cat={cat}
+                  ahspItemId={ahspItemId}
                   initial={raw}
+                  initialFormula={formulaMap.get(l.id) ?? null}
+                  formulaVars={formulaVars}
                   onCancel={() => setEditingId(null)}
                   onDirty={onDirty}
                   onDelete={async () => { if (deleteMut) await deleteMut.mutateAsync({ id: raw.id }); }}
                   onSave={async vals => {
+                    // When a formula is present, save through resourceUpsert so the
+                    // server recomputes + stores the koefisien from the formula.
+                    if (vals.formula && upsertMut) {
+                      await upsertMut.mutateAsync({
+                        ahspItemId,
+                        id: raw.id,
+                        category: raw.category,
+                        ordinal: raw.ordinal,
+                        resourceCode: raw.resourceCode,
+                        uraian: vals.uraian,
+                        koefisien: vals.koefisien,
+                        formula: vals.formula,
+                        satuan: vals.satuan,
+                        hsd: vals.hsd,
+                      });
+                      setEditingId(null);
+                      return;
+                    }
                     if (!updateMut) return;
-                    await updateMut.mutateAsync({ id: raw.id, ...vals });
+                    await updateMut.mutateAsync({ id: raw.id, uraian: vals.uraian, satuan: vals.satuan, koefisien: vals.koefisien, hsd: vals.hsd });
                     setEditingId(null);
                   }}
                 />
               );
             }
             return (
-              <tr key={l.id} className="border-b border-neutral-100 hover:bg-orange-50/40">
+              <tr key={l.id} className="border-b border-neutral-100 hover:bg-orange-50/40 align-top">
                 <td className="px-3 py-1.5 font-bold text-[var(--color-brand)]">{l.code}</td>
-                <td className="px-3 py-1.5">{l.uraian}</td>
+                <td className="px-3 py-1.5">
+                  <div>{l.uraian}</div>
+                  {/* Explicit line math: koefisien × HSD = subtotal */}
+                  <div className="text-[10px] text-neutral-400 tabular-nums mt-0.5">
+                    {fmtKoef(l.koefisien, 6)} × {fmtIDR(l.hsd)} = {fmtIDR(l.subtotal)}
+                  </div>
+                </td>
                 <td className="px-3 py-1.5 text-neutral-500">{l.satuan ?? '—'}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{l.koefisien.toLocaleString('id-ID', { maximumFractionDigits: 6 })}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">
+                  {l.formula ? (
+                    <div className="leading-tight">
+                      <div className="text-[10px] text-neutral-400 font-normal break-words">{l.formula} =</div>
+                      <div className="font-bold">{fmtKoef(l.koefisien, 6)}</div>
+                    </div>
+                  ) : (
+                    fmtKoef(l.koefisien, 6)
+                  )}
+                </td>
                 <td className="px-3 py-1.5 text-right tabular-nums">{fmtIDR(l.hsd)}</td>
                 <td className="px-3 py-1.5 text-right font-bold tabular-nums">{fmtIDR(l.subtotal)}</td>
                 {editable && (
@@ -1145,13 +1214,45 @@ function CategoryBlock({
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
 
-function ResRowEdit({ cat: _cat, initial, onCancel, onSave, onDirty, onDelete }: {
+// ─── FORMULA LEGEND ───────────────────────────────────────────────────────────
+function FormulaLegend({ varEntries }: { varEntries: [string, number][] }) {
+  return (
+    <div className="border-2 border-dashed border-neutral-300 bg-neutral-50 p-3 font-mono text-xs">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="tracking-[0.2em] text-neutral-500">VARIABEL FORMULA</span>
+        {varEntries.length > 0 ? (
+          varEntries.map(([name, val]) => (
+            <span key={name} className="px-1.5 py-0.5 bg-white border border-neutral-300 tabular-nums">
+              <span className="font-bold text-[var(--color-brand)]">{name}</span>
+              <span className="text-neutral-400"> = </span>
+              <span>{fmtKoef(val, 6)}</span>
+            </span>
+          ))
+        ) : (
+          <span className="text-neutral-400">
+            Belum ada variabel — tambahkan baris INPUTS dengan kolom VARIABEL + NILAI.
+          </span>
+        )}
+      </div>
+      <div className="text-[10px] text-neutral-500 mt-2">
+        Gunakan <span className="text-neutral-700">+ - × ÷ ( )</span> dan variabel di atas. Contoh:{' '}
+        <span className="text-neutral-700">1 / (Q1 × n)</span>
+      </div>
+    </div>
+  );
+}
+
+function ResRowEdit({ cat: _cat, ahspItemId: _ahspItemId, initial, initialFormula, formulaVars, onCancel, onSave, onDirty, onDelete }: {
   cat: Cat;
+  ahspItemId: string;
   initial: ResRow;
+  initialFormula: string | null;
+  formulaVars: Record<string, number>;
   onCancel: () => void;
   onSave: (vals: any) => Promise<void> | void;
   onDirty?: (delta: number) => void;
@@ -1162,40 +1263,80 @@ function ResRowEdit({ cat: _cat, initial, onCancel, onSave, onDirty, onDelete }:
     satuan: initial.satuan ?? '',
     koefisien: String(initial.koefisien ?? '0'),
     hsd: String(initial.hsd ?? '0'),
+    formula: initialFormula ?? '',
   });
   const dirtyRef = useRef(false);
   const isDirty =
     v.uraian !== initial.uraian ||
     v.satuan !== (initial.satuan ?? '') ||
     v.koefisien !== String(initial.koefisien ?? '0') ||
-    v.hsd !== String(initial.hsd ?? '0');
+    v.hsd !== String(initial.hsd ?? '0') ||
+    v.formula !== (initialFormula ?? '');
   useEffect(() => {
     if (isDirty && !dirtyRef.current) { dirtyRef.current = true; onDirty?.(+1); }
     if (!isDirty && dirtyRef.current) { dirtyRef.current = false; onDirty?.(-1); }
   }, [isDirty, onDirty]);
   useEffect(() => () => { if (dirtyRef.current) onDirty?.(-1); }, [onDirty]);
 
+  // Live preview of the formula against the item's input variables.
+  const hasFormula = v.formula.trim().length > 0;
+  const preview = hasFormula ? evalFormula(v.formula, formulaVars) : null;
+  // Effective koefisien: derived from formula when valid, else the manual value.
+  const effKoef = preview?.ok ? preview.value : Number(v.koefisien);
+
   const doSave = () => {
+    // If a formula is typed but invalid, block the save (server would reject anyway).
+    if (hasFormula && preview && !preview.ok) return;
     onSave({
       uraian: v.uraian,
       satuan: v.satuan || undefined,
-      koefisien: Number(v.koefisien),
+      koefisien: effKoef,
       hsd: Number(v.hsd),
+      formula: hasFormula ? v.formula.trim() : undefined,
     });
     if (dirtyRef.current) { dirtyRef.current = false; onDirty?.(-1); }
   };
+  const saveDisabled = !isDirty || (hasFormula && !!preview && !preview.ok);
   const onKey = rowKeyHandler({ onSave: doSave, onCancel });
   return (
-    <tr className={`border-b border-neutral-200 ${isDirty ? 'bg-orange-50' : 'hover:bg-orange-50/40'}`} onKeyDown={onKey}>
+    <tr className={`border-b border-neutral-200 align-top ${isDirty ? 'bg-orange-50' : 'hover:bg-orange-50/40'}`} onKeyDown={onKey}>
       <td className="px-3 py-1.5 font-bold text-[var(--color-brand)] font-mono text-xs">{initial.resourceCode}</td>
       <td className="px-2 py-1"><Input className="text-xs py-1" value={v.uraian} onChange={e => setV({ ...v, uraian: e.target.value })} /></td>
       <td className="px-2 py-1"><Input className="text-xs py-1" value={v.satuan} onChange={e => setV({ ...v, satuan: e.target.value })} /></td>
-      <td className="px-2 py-1"><Input className="text-xs py-1 text-right tabular-nums" type="number" step="any" value={v.koefisien} onChange={e => setV({ ...v, koefisien: e.target.value })} /></td>
+      <td className="px-2 py-1">
+        <Input
+          className="text-xs py-1 text-right tabular-nums disabled:opacity-60"
+          type="number"
+          step="any"
+          value={hasFormula && preview?.ok ? String(preview.value) : v.koefisien}
+          disabled={hasFormula}
+          title={hasFormula ? 'Dihitung dari formula' : undefined}
+          onChange={e => setV({ ...v, koefisien: e.target.value })}
+        />
+        {/* Formula input + live preview */}
+        <Input
+          className="text-xs py-1 mt-1 font-mono"
+          placeholder="formula, mis. 1 / (Q1 × n)"
+          value={v.formula}
+          onChange={e => setV({ ...v, formula: e.target.value })}
+        />
+        {hasFormula && preview && (
+          preview.ok ? (
+            <div className="text-[10px] text-[var(--color-brand)] tabular-nums mt-0.5 text-right">
+              = {fmtKoef(preview.value, 6)}
+            </div>
+          ) : (
+            <div className="text-[10px] text-red-600 mt-0.5 text-right break-words">
+              {preview.error ?? 'Formula tidak valid'}
+            </div>
+          )
+        )}
+      </td>
       <td className="px-2 py-1"><Input className="text-xs py-1 text-right tabular-nums" type="number" step="any" value={v.hsd} onChange={e => setV({ ...v, hsd: e.target.value })} /></td>
-      <td className="px-3 py-1.5 text-right font-bold tabular-nums">{fmtIDR(Number(v.koefisien) * Number(v.hsd))}</td>
+      <td className="px-3 py-1.5 text-right font-bold tabular-nums">{fmtIDR(effKoef * Number(v.hsd))}</td>
       <td className="px-2 py-1 text-right">
         <div className="inline-flex gap-1 items-center">
-          <button title="Save (Enter / Ctrl+S)" className="p-1 text-[var(--color-brand)] hover:bg-orange-100 disabled:opacity-30" disabled={!isDirty} onClick={doSave}>
+          <button title="Save (Enter / Ctrl+S)" className="p-1 text-[var(--color-brand)] hover:bg-orange-100 disabled:opacity-30" disabled={saveDisabled} onClick={doSave}>
             <Check size={14} />
           </button>
           <button title="Cancel (Esc)" className="p-1 hover:bg-neutral-200" onClick={onCancel}>

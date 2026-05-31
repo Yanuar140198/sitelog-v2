@@ -13,16 +13,16 @@ export default function DashboardPage() {
   const overallProgress = total > 0 ? (earned / total) * 100 : 0;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-8">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">PORTFOLIO</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Dashboard</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Dashboard</h1>
       </div>
 
       <OnboardingTour />
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Projects" value={String(projects.data?.length ?? 0)} />
         <KpiCard label="Portfolio Value" value={fmtIDR(total)} />
         <KpiCard label="Earned Value" value={fmtIDR(earned)} />
@@ -37,7 +37,8 @@ export default function DashboardPage() {
             + NEW PROJECT
           </Link>
         </div>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[640px]">
           <thead className="bg-[var(--color-ink)] text-white">
             <tr>
               <th className="text-left px-4 py-2 tracking-wider">CODE</th>
@@ -68,6 +69,7 @@ export default function DashboardPage() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );

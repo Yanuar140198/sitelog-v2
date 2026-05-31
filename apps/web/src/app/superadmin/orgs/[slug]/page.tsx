@@ -19,13 +19,13 @@ export default function OrgDetail() {
       <div>
         <Link href="/superadmin/orgs" className="font-mono text-xs text-[var(--color-brand)]">← ALL ORGS</Link>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)] mt-3">CUSTOMER</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">{org.name}</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">{org.name}</h1>
         <p className="font-mono text-xs text-white/60 mt-2">{org.slug} · plan: {org.plan} · created {new Date(org.createdAt).toLocaleDateString()}</p>
       </div>
 
       <section className="border-2 border-white/30 bg-black/50 p-4">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">BILLING</h2>
-        <div className="grid grid-cols-3 gap-3 font-mono text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 font-mono text-xs">
           <div><span className="text-white/50">Plan:</span> {org.plan}</div>
           <div><span className="text-white/50">Status:</span> {subscription?.status ?? '—'}</div>
           <div><span className="text-white/50">Seats:</span> {subscription?.seats ?? '—'}</div>
@@ -46,18 +46,22 @@ export default function OrgDetail() {
 
       <section className="border-2 border-white/30 bg-black/50 p-4">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">MEMBERS ({members.length})</h2>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[480px]">
           <thead className="text-white/50"><tr><th className="text-left py-1">EMAIL</th><th className="text-left">NAME</th><th className="text-left">ROLE</th><th className="text-left">JOINED</th></tr></thead>
           <tbody>{members.map((m: any) => <tr key={m.userId} className="border-t border-white/10"><td className="py-1">{m.email}</td><td>{m.name}</td><td className="uppercase">{m.role}</td><td className="text-white/60">{m.acceptedAt ? new Date(m.acceptedAt).toLocaleDateString() : 'pending'}</td></tr>)}</tbody>
         </table>
+        </div>
       </section>
 
       <section className="border-2 border-white/30 bg-black/50 p-4">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">PROJECTS ({projects.length})</h2>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[480px]">
           <thead className="text-white/50"><tr><th className="text-left py-1">CODE</th><th className="text-left">NAME</th><th className="text-left">STATUS</th><th className="text-left">CREATED</th></tr></thead>
           <tbody>{projects.map((p: any) => <tr key={p.id} className="border-t border-white/10"><td className="py-1 text-[var(--color-brand)]">{p.code}</td><td>{p.name}</td><td className="uppercase">{p.status}</td><td className="text-white/60">{new Date(p.createdAt).toLocaleDateString()}</td></tr>)}</tbody>
         </table>
+        </div>
       </section>
 
       <FlagOverridePanel orgId={org.id} />
@@ -73,7 +77,8 @@ function FlagOverridePanel({ orgId }: { orgId: string }) {
     <section className="border-2 border-white/30 bg-black/50 p-4">
       <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">FEATURE FLAG OVERRIDES</h2>
       <p className="font-mono text-[10px] text-white/50 mb-3">Force ON/OFF per flag for this org. Clear to fall back to global + rollout %.</p>
-      <table className="w-full font-mono text-xs">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs min-w-[480px]">
         <thead className="text-white/50"><tr>
           <th className="text-left py-1">KEY</th>
           <th className="text-left">GLOBAL</th>
@@ -96,6 +101,7 @@ function FlagOverridePanel({ orgId }: { orgId: string }) {
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }

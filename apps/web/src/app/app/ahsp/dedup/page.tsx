@@ -131,7 +131,7 @@ export default function AhspDedupPage() {
   const groups = dups.data;
 
   return (
-    <div className="p-8 max-w-6xl space-y-6">
+    <div className="p-4 md:p-8 max-w-6xl space-y-6">
       <Link href="/app/ahsp" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
         <ArrowLeft size={14} /> AHSP CATALOG
       </Link>
@@ -139,7 +139,7 @@ export default function AhspDedupPage() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">TOOLS · DEDUP</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">AHSP Duplicate Resolution</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">AHSP Duplicate Resolution</h1>
           <p className="font-mono text-xs text-neutral-500 mt-2">
             {groups.length} duplicate group{groups.length === 1 ? '' : 's'} detected
             {' · '}grouped by case-insensitive (jenis, satuan)
@@ -179,7 +179,8 @@ export default function AhspDedupPage() {
               </div>
             </div>
 
-            <table className="w-full font-mono text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] font-mono text-xs">
               <thead className="bg-neutral-100 text-neutral-700">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-32">KODE</th>
@@ -232,8 +233,9 @@ export default function AhspDedupPage() {
                 })}
               </tbody>
             </table>
+            </div>
 
-            <div className="px-4 py-3 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between">
+            <div className="px-4 py-3 bg-neutral-50 border-t border-neutral-200 flex flex-wrap gap-3 items-center justify-between">
               <div className="font-mono text-xs text-neutral-600">
                 Will remove {removeCount} of {g.items.length} item(s).
                 {' '}Default keeps the row with most project usage.

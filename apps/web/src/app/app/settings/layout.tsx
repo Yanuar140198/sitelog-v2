@@ -16,15 +16,15 @@ const TABS = [
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">CONFIG</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Settings</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Settings</h1>
       </div>
-      <div className="flex border-b-2 border-[var(--color-ink)]">
+      <div className="flex border-b-2 border-[var(--color-ink)] overflow-x-auto whitespace-nowrap">
         {TABS.map(t => (
           <Link key={t.href} href={t.href as any}
-            className="px-4 py-2 font-mono text-xs tracking-wider border-b-4 border-transparent hover:border-[var(--color-brand)]">
+            className="px-4 py-2 font-mono text-xs tracking-wider border-b-4 border-transparent hover:border-[var(--color-brand)] shrink-0">
             {t.label}
           </Link>
         ))}

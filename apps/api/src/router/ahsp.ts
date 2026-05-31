@@ -2,8 +2,10 @@ import { z } from 'zod';
 import { and, eq, or, isNull, asc, desc, max, inArray, sql } from 'drizzle-orm';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import { ahspItem, ahspInput, ahspKoefisien, ahspResource, ahspVersion, ahspPin, resourceMaster, user } from '@sitelog/db';
+import { evalFormula } from '@sitelog/shared';
 import { TRPCError } from '@trpc/server';
 import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
+import { estimateProductivity } from '../lib/productivity.js';
 
 const N = (v: unknown) => Number(v ?? 0);
 
@@ -304,6 +306,7 @@ export const ahspRouter = router({
               uraian: r.uraian,
               satuan: r.satuan,
               koefisien: koef,
+              formula: r.formula ?? null,
               hsd,
               subtotal: koef * hsd,
             };
@@ -403,6 +406,7 @@ export const ahspRouter = router({
       resourceCode: z.string().min(1),
       uraian: z.string().min(1),
       koefisien: z.number(),
+      formula: z.string().max(256).optional(),   // optional: derives koefisien, e.g. "1 / (Q × n)"
       satuan: z.string().optional(),
       hsd: z.number(),
     }))
@@ -412,17 +416,39 @@ export const ahspRouter = router({
         .where(and(eq(ahspItem.id, input.ahspItemId), eq(ahspItem.organizationId, ctx.session.organizationId)))
         .limit(1);
       if (!own) throw new TRPCError({ code: 'FORBIDDEN', message: 'Can only edit org-owned AHSP items' });
+
+      // If a formula is given, evaluate it against the item's input variables so the
+      // coefficient's basis is explicit + recomputable.
+      let koef = input.koefisien;
+      const formula = input.formula?.trim() || null;
+      if (formula) {
+        const inputs = await ctx.db.select({ variable: ahspInput.variable, nilai: ahspInput.nilai })
+          .from(ahspInput).where(eq(ahspInput.ahspItemId, input.ahspItemId));
+        const vars: Record<string, number> = {};
+        for (const i of inputs) { if (i.variable && i.nilai != null) vars[i.variable] = Number(i.nilai); }
+        const r = evalFormula(formula, vars);
+        if (!r.ok) throw new TRPCError({ code: 'BAD_REQUEST', message: `Formula tidak valid: ${r.error}` });
+        koef = r.value;
+      }
+
       const values = {
         ahspItemId: input.ahspItemId,
         category: input.category,
         ordinal: input.ordinal,
         resourceCode: input.resourceCode,
         uraian: input.uraian,
-        koefisien: String(input.koefisien),
+        koefisien: String(koef),
+        formula,
         satuan: input.satuan,
         hsd: String(input.hsd),
       };
       if (input.id) {
+        // Ensure the targeted resource row also belongs to an org-owned item
+        // (input.ahspItemId being org-owned isn't enough — input.id could point elsewhere).
+        const [res] = await ctx.db.select({ ahspItemId: ahspResource.ahspItemId }).from(ahspResource)
+          .where(eq(ahspResource.id, input.id)).limit(1);
+        if (!res) throw new TRPCError({ code: 'NOT_FOUND' });
+        await assertEditable(ctx.db, res.ahspItemId, ctx.session.organizationId);
         const [row] = await ctx.db.update(ahspResource).set(values).where(eq(ahspResource.id, input.id)).returning();
         return row;
       }
@@ -433,6 +459,11 @@ export const ahspRouter = router({
   resourceDelete: requireRole('owner', 'admin', 'estimator')
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify the resource's parent item is org-owned before deleting (tenant isolation).
+      const [res] = await ctx.db.select({ ahspItemId: ahspResource.ahspItemId }).from(ahspResource)
+        .where(eq(ahspResource.id, input.id)).limit(1);
+      if (!res) throw new TRPCError({ code: 'NOT_FOUND' });
+      await assertEditable(ctx.db, res.ahspItemId, ctx.session.organizationId);
       await ctx.db.delete(ahspResource).where(eq(ahspResource.id, input.id));
       return { ok: true };
     }),
@@ -1577,7 +1608,7 @@ export const ahspRouter = router({
         const projRes = await tx.execute(sql`
           SELECT COUNT(DISTINCT bi.project_id)::int AS n
           FROM boq_item bi
-          WHERE bi.ahsp_item_id IN ${sql.raw(`('${input.removeIds.join("','")}')`)}
+          WHERE bi.ahsp_item_id IN (${sql.join(input.removeIds.map((id) => sql`${id}`), sql`, `)})
         `);
         const projRow = ((projRes as any).rows ?? projRes)[0];
         projectsAffected = Number(projRow?.n ?? 0);
@@ -1701,7 +1732,7 @@ export const ahspRouter = router({
           const projRes = await tx.execute(sql`
             SELECT COUNT(DISTINCT bi.project_id)::int AS n
             FROM boq_item bi
-            WHERE bi.ahsp_item_id IN ${sql.raw(`('${removeIds.join("','")}')`)}
+            WHERE bi.ahsp_item_id IN (${sql.join(removeIds.map((id) => sql`${id}`), sql`, `)})
           `);
           const projRow = ((projRes as any).rows ?? projRes)[0];
           projectsAffected += Number(projRow?.n ?? 0);
@@ -2083,29 +2114,12 @@ export const ahspRouter = router({
       const unitRate = totals.unitRate;
       const totalCost = unitRate * input.plannedVolume;
 
-      // Scan inputs + koefisien for productivity values
-      type ProdRow = { kode: string; variable: string | null; nilai: number | null };
-      const pool: ProdRow[] = [
+      // Scan inputs + koefisien for productivity signals (Q1/Q2/Qt).
+      const pool = [
         ...inputs.map(i => ({ kode: i.kode, variable: i.variable, nilai: i.nilai === null ? null : N(i.nilai) })),
         ...koef.map(k => ({ kode: k.kode, variable: k.variable, nilai: k.nilai === null ? null : N(k.nilai) })),
       ];
-      const findBy = (re: RegExp): number | null => {
-        for (const p of pool) {
-          if (p.nilai === null || p.nilai === undefined || !isFinite(p.nilai) || p.nilai <= 0) continue;
-          if (re.test(p.kode) || (p.variable && re.test(p.variable))) return p.nilai;
-        }
-        return null;
-      };
-      const q1 = findBy(/\bQ1\b/i);
-      const q2 = findBy(/\bQ2\b/i);
-      const qt = findBy(/\bQt\b/i);
-
-      // Use the strongest signal available
-      const perHour = q1 ?? q2 ?? (qt !== null ? qt / 7 : null);
-      const perDay = qt ?? (perHour !== null ? perHour * 7 : null);
-
-      const estimatedHours = perHour && perHour > 0 ? input.plannedVolume / perHour : null;
-      const estimatedDays  = perDay  && perDay  > 0 ? input.plannedVolume / perDay  : null;
+      const { perHour, perDay, estimatedHours, estimatedDays } = estimateProductivity(pool, input.plannedVolume);
 
       const requiredResources = resources.map(r => ({
         kode: r.resourceCode,

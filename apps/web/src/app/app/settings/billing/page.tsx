@@ -19,7 +19,7 @@ export default function BillingPage() {
     <div className="space-y-6">
       <div className="border-2 border-[var(--color-ink)] bg-white">
         <div className="px-4 py-2 bg-[var(--color-ink)] text-white font-mono text-xs tracking-[0.2em]">CURRENT PLAN</div>
-        <div className="p-5 flex justify-between items-center">
+        <div className="p-5 flex flex-wrap gap-3 justify-between items-center">
           <div>
             <div className="font-mono text-xs text-neutral-500">Plan</div>
             <div className="font-display text-3xl font-bold capitalize">{sub?.plan ?? org?.plan ?? 'trial'}</div>

@@ -21,11 +21,11 @@ export default function SuperAdminDatabase() {
     <div className="space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">OPS</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Database</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Database</h1>
         <p className="font-mono text-xs text-white/60 mt-2">Live PostgreSQL stats. Auto-refresh 10s.</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="border-2 border-white/30 bg-black/50 p-4">
           <p className="font-mono text-[10px] tracking-wider text-[var(--color-brand)]">DATABASE SIZE</p>
           <p className="font-display text-3xl font-bold mt-1">{bytes(stats.data.databaseBytes)}</p>
@@ -56,7 +56,8 @@ export default function SuperAdminDatabase() {
 
       <section className="border-2 border-white/30 bg-black/50 p-4">
         <h2 className="font-mono text-xs tracking-wider text-[var(--color-brand)] mb-3">TOP 30 TABLES BY SIZE</h2>
-        <table className="w-full font-mono text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full font-mono text-xs min-w-[560px]">
           <thead className="text-white/50"><tr>
             <th className="text-left py-1">TABLE</th>
             <th className="text-right">ROWS</th>
@@ -74,6 +75,7 @@ export default function SuperAdminDatabase() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );

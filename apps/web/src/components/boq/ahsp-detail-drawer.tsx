@@ -95,16 +95,33 @@ function ResourceBlock({ label, lines }: { label: string; lines: any[] }) {
           </tr>
         </thead>
         <tbody>
-          {lines.map(l => (
-            <tr key={l.id} className="border-b border-neutral-100">
-              <td className="px-2 py-1.5"><strong>{l.resourceCode}</strong></td>
-              <td className="px-2 py-1.5">{l.uraian}</td>
-              <td className="px-2 py-1.5 text-right">{fmtNum(Number(l.koefisien), 6)}</td>
-              <td className="px-2 py-1.5 text-neutral-500">{l.satuan ?? '—'}</td>
-              <td className="px-2 py-1.5 text-right">{fmtIDR(Number(l.hsd))}</td>
-              <td className="px-2 py-1.5 text-right font-bold">{fmtIDR(Number(l.koefisien) * Number(l.hsd))}</td>
-            </tr>
-          ))}
+          {lines.map(l => {
+            const koef = Number(l.koefisien);
+            const hsd = Number(l.hsd);
+            const total = koef * hsd;
+            return (
+              <tr key={l.id} className="border-b border-neutral-100 align-top">
+                <td className="px-2 py-1.5"><strong>{l.resourceCode}</strong></td>
+                <td className="px-2 py-1.5">
+                  <div>{l.uraian}</div>
+                  {/* Explicit line math: koefisien × HSD = total */}
+                  <div className="text-[9px] text-neutral-400 tabular-nums mt-0.5">
+                    {fmtNum(koef, 6)} × {fmtIDR(hsd)} = {fmtIDR(total)}
+                  </div>
+                </td>
+                <td className="px-2 py-1.5 text-right tabular-nums">
+                  {fmtNum(koef, 6)}
+                  {/* Formula derivation, muted — same style as the AHSP detail/print pages */}
+                  {l.formula ? (
+                    <div className="text-[9px] text-neutral-400 font-normal break-words">= {l.formula}</div>
+                  ) : null}
+                </td>
+                <td className="px-2 py-1.5 text-neutral-500">{l.satuan ?? '—'}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums">{fmtIDR(hsd)}</td>
+                <td className="px-2 py-1.5 text-right font-bold tabular-nums">{fmtIDR(total)}</td>
+              </tr>
+            );
+          })}
           <tr className="bg-neutral-100 font-bold">
             <td colSpan={5} className="px-2 py-1.5 text-right">JUMLAH</td>
             <td className="px-2 py-1.5 text-right text-[var(--color-brand)]">{fmtIDR(sub)}</td>

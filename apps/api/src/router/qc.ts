@@ -90,6 +90,8 @@ export const qcRouter = router({
       testedBy: z.string().max(120).nullable().optional(),
       retestOfId: z.string().uuid().nullable().optional(),
       photoKeys: z.array(z.string()).optional(),
+    }).refine((d) => d.specMin == null || d.specMax == null || d.specMin <= d.specMax, {
+      message: 'specMin must be ≤ specMax', path: ['specMin'],
     }))
     .mutation(async ({ ctx, input }) => {
       await assertProjectInOrg(ctx, input.projectId);

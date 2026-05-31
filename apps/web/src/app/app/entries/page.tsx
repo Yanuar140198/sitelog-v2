@@ -12,18 +12,19 @@ export default function EntriesPage() {
   const list = trpc.entry.list.useQuery({ from: from || undefined, to: to || undefined, limit: 100 });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">FIELD</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Daily Entries</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Daily Entries</h1>
       </div>
 
-      <div className="flex gap-4 items-end">
+      <div className="flex flex-wrap gap-4 items-end">
         <div><Label>From</Label><Input type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
         <div><Label>To</Label><Input type="date" value={to} onChange={e => setTo(e.target.value)} /></div>
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">DATE</th>
@@ -51,6 +52,7 @@ export default function EntriesPage() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

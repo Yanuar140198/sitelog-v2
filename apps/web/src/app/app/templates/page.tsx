@@ -29,18 +29,18 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-wrap gap-2 items-end justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">SCAFFOLDS</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Template Library</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Template Library</h1>
           <p className="font-mono text-xs text-neutral-500 mt-2">{publicItems.length} public · {orgItems.length} org-custom</p>
         </div>
         <Button variant="primary" onClick={() => setShow(true)}><Plus size={14} /> NEW TEMPLATE</Button>
       </div>
 
-      <div className="flex gap-3 items-end">
-        <div className="flex-1">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[200px]">
           <Label>Search</Label>
           <div className="relative">
             <Search size={14} className="absolute left-2 top-3 text-neutral-400" />
@@ -73,9 +73,9 @@ export default function TemplatesPage() {
       </Section>
 
       {show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
           onClick={e => { if (e.target === e.currentTarget) setShow(false); }}>
-          <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-xl w-full shadow-[8px_8px_0_var(--color-brand)]">
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
             <h2 className="font-display text-2xl font-bold mb-4">New Template</h2>
             <div className="space-y-3">
               <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>

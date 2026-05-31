@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@sitelog/api-client/react';
@@ -32,7 +32,7 @@ type Row = {
 const VALID_SORTS: SortKey[] = ['kode-asc', 'jenis-asc', 'rate-desc', 'used-desc'];
 const VALID_VIEWS: ViewMode[] = ['table', 'grid'];
 
-export default function AhspCatalogPage() {
+function AhspCatalogInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -339,13 +339,13 @@ export default function AhspCatalogPage() {
   const loading = rich.isLoading || (rich.isError && fallback.isLoading);
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       {/* HEADER */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">CATALOG</p>
           <div className="flex items-baseline gap-3 mt-1">
-            <h1 className="font-display text-4xl font-bold tracking-tight">AHSP Catalog</h1>
+            <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight">AHSP Catalog</h1>
             <span className="font-mono text-xs px-2 py-1 bg-[var(--color-ink)] text-white">{items.length} ITEMS</span>
           </div>
           <p className="font-mono text-xs text-neutral-500 mt-2">
@@ -762,22 +762,30 @@ export default function AhspCatalogPage() {
           <div className="bg-white border-2 border-[var(--color-ink)] p-6 max-w-xl w-full shadow-[8px_8px_0_var(--color-brand)]">
             <h2 className="font-display text-2xl font-bold mb-4">New Custom AHSP</h2>
             <form onSubmit={e => { e.preventDefault(); create.mutate({ ...form, ohpPct: Number(form.ohpPct) }); }}
-              className="grid grid-cols-2 gap-3">
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>Kode *</Label><Input required value={form.kode} onChange={e => set('kode', e.target.value)} placeholder="CUSTOM-001" /></div>
               <div><Label>Label</Label><Input value={form.label} onChange={e => set('label', e.target.value)} /></div>
-              <div className="col-span-2"><Label>Jenis Pekerjaan *</Label><Input required value={form.jenis} onChange={e => set('jenis', e.target.value)} placeholder="Custom Cut Soil with Bulldozer" /></div>
+              <div className="sm:col-span-2"><Label>Jenis Pekerjaan *</Label><Input required value={form.jenis} onChange={e => set('jenis', e.target.value)} placeholder="Custom Cut Soil with Bulldozer" /></div>
               <div><Label>Section</Label><Input value={form.section} onChange={e => set('section', e.target.value)} placeholder="EARTHWORK" /></div>
               <div><Label>Satuan *</Label><Input required value={form.satuan} onChange={e => set('satuan', e.target.value)} placeholder="M3" /></div>
-              <div><Label>OHP %</Label><Input type="number" step="0.1" value={form.ohpPct} onChange={e => set('ohpPct', e.target.value)} /></div>
-              <div className="col-span-2 flex gap-2 mt-3">
+              <div><Label>OHP %</Label><Input type="number" step="0.1" value={form.ohpPct} onChange={e => set('ohpPct', Number(e.target.value) || 0)} /></div>
+              <div className="sm:col-span-2 flex gap-2 mt-3">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>
               </div>
-              {create.error && <div className="col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
+              {create.error && <div className="sm:col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
             </form>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function AhspCatalogPage() {
+  return (
+    <Suspense fallback={<div className="p-8 font-mono text-xs">Loading…</div>}>
+      <AhspCatalogInner />
+    </Suspense>
   );
 }

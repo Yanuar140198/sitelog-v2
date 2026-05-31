@@ -25,11 +25,11 @@ export default function AuditPage() {
   });
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex justify-between items-end">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-wrap gap-2 justify-between items-end">
         <div>
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">COMPLIANCE</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight mt-1">Audit Log</h1>
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Audit Log</h1>
         </div>
         <Button onClick={() => exportCsv.mutate({
           q: filter.q || undefined, action: filter.action || undefined, resource: filter.resource || undefined,
@@ -38,8 +38,8 @@ export default function AuditPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="sm:col-span-2">
           <Label>Search</Label>
           <div className="relative">
             <Search size={14} className="absolute left-2 top-3 text-neutral-400" />
@@ -50,7 +50,8 @@ export default function AuditPage() {
         <div><Label>Resource</Label><Input value={filter.resource} onChange={e => setFilter(p => ({ ...p, resource: e.target.value }))} placeholder="project" /></div>
       </div>
 
-      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)]">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs bg-white border-2 border-[var(--color-ink)] min-w-[720px]">
         <thead className="bg-[var(--color-ink)] text-white">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">TIME</th>
@@ -75,6 +76,7 @@ export default function AuditPage() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

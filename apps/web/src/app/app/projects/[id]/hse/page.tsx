@@ -64,7 +64,7 @@ export default function HsePage({ params }: { params: Promise<{ id: string }> })
   return (
     <div className="min-h-[calc(100vh-56px)] bg-neutral-50">
       {/* Header */}
-      <header className="bg-white border-b-2 border-[var(--color-ink)] px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b-2 border-[var(--color-ink)] px-4 md:px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <Link href={`/app/projects/${id}`} className="p-2 border border-[var(--color-ink)] hover:bg-neutral-100">
             <ArrowLeft size={14} />
@@ -86,10 +86,10 @@ export default function HsePage({ params }: { params: Promise<{ id: string }> })
       </header>
 
       {/* KPI cards */}
-      <section className="px-6 py-6 grid grid-cols-3 gap-4">
+      <section className="px-4 md:px-6 py-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">DAYS SINCE LAST INCIDENT</div>
-          <div className={`font-display text-6xl font-bold mt-2 ${daysSince == null ? 'text-neutral-400' : daysSince > 30 ? 'text-green-700' : 'text-red-600'}`}>
+          <div className={`font-display text-5xl md:text-6xl font-bold mt-2 ${daysSince == null ? 'text-neutral-400' : daysSince > 30 ? 'text-green-700' : 'text-red-600'}`}>
             {daysSince == null ? '∞' : daysSince}
           </div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">
@@ -98,18 +98,18 @@ export default function HsePage({ params }: { params: Promise<{ id: string }> })
         </div>
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">OPEN INCIDENTS</div>
-          <div className={`font-display text-6xl font-bold mt-2 ${openCount > 0 ? 'text-red-600' : 'text-neutral-400'}`}>{openCount}</div>
+          <div className={`font-display text-5xl md:text-6xl font-bold mt-2 ${openCount > 0 ? 'text-red-600' : 'text-neutral-400'}`}>{openCount}</div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">requires action</div>
         </div>
         <div className="bg-white border-2 border-[var(--color-ink)] p-5">
           <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold">TOTAL THIS YEAR</div>
-          <div className="font-display text-6xl font-bold mt-2">{yearCount}</div>
+          <div className="font-display text-5xl md:text-6xl font-bold mt-2">{yearCount}</div>
           <div className="font-mono text-[10px] text-neutral-500 mt-1">{new Date().getFullYear()}</div>
         </div>
       </section>
 
       {/* Severity breakdown */}
-      <section className="px-6 pb-4">
+      <section className="px-4 md:px-6 pb-4">
         <div className="font-mono text-[10px] tracking-wider text-neutral-500 font-bold mb-2">SEVERITY BREAKDOWN</div>
         <div className="flex flex-wrap gap-2">
           {SEVERITIES.map(s => {
@@ -125,8 +125,8 @@ export default function HsePage({ params }: { params: Promise<{ id: string }> })
       </section>
 
       {/* Table */}
-      <section className="px-6 pb-10">
-        <div className="bg-white border-2 border-[var(--color-ink)]">
+      <section className="px-4 md:px-6 pb-10">
+        <div className="bg-white border-2 border-[var(--color-ink)] overflow-x-auto">
           {!list.data?.length ? (
             <div className="p-16 text-center">
               <ShieldAlert size={48} className="mx-auto text-[var(--color-brand)]" />
@@ -134,7 +134,7 @@ export default function HsePage({ params }: { params: Promise<{ id: string }> })
               <p className="font-mono text-xs text-neutral-500 mt-2">Hit + NEW INCIDENT to log a near-miss, injury, or environmental event.</p>
             </div>
           ) : (
-            <table className="w-full font-mono text-xs">
+            <table className="w-full min-w-[680px] font-mono text-xs">
               <thead className="bg-[var(--color-ink)] text-white">
                 <tr>
                   <th className="text-left px-3 py-2 tracking-wider w-[110px]">DATE</th>
@@ -213,7 +213,7 @@ function NewIncidentModal({ projectId, onClose, onSubmit, pending }: {
           <button onClick={onClose}><X size={16} /></button>
         </div>
         <div className="p-5 space-y-3 font-mono text-xs">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="DATE">
               <input type="date" value={form.incidentDate} onChange={e => setForm({ ...form, incidentDate: e.target.value })} className="w-full border border-[var(--color-ink)] px-2 py-1" />
             </Field>

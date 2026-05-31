@@ -9,6 +9,22 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
       (window as any).Sentry.captureException(error);
     }
     console.error('[error.tsx]', error);
+    // Report render errors to the error-log ingest (fire-and-forget, never throws)
+    try {
+      void fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: error.message || 'Render error',
+          stack: error.stack,
+          url: typeof location !== 'undefined' ? location.href : undefined,
+          level: 'error',
+          context: error.digest ? { digest: error.digest } : undefined,
+        }),
+      }).catch(() => {});
+    } catch {
+      /* never throw */
+    }
   }, [error]);
 
   return (

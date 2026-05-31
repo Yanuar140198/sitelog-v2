@@ -9,10 +9,11 @@ export default function SuperAdminOrgs() {
     <div className="space-y-6">
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">CUSTOMERS</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight mt-1">All Organizations</h1>
+        <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">All Organizations</h1>
       </div>
 
-      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50">
+      <div className="overflow-x-auto">
+      <table className="w-full font-mono text-xs border-2 border-white/30 bg-black/50 min-w-[720px]">
         <thead className="bg-[var(--color-brand)]">
           <tr>
             <th className="text-left px-3 py-2 tracking-wider">SLUG</th>
@@ -38,6 +39,7 @@ export default function SuperAdminOrgs() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

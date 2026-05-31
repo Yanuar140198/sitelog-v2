@@ -9,17 +9,17 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const detail = trpc.entry.detail.useQuery({ id });
   const [lightbox, setLightbox] = useState<number | null>(null);
-  if (!detail.data) return <div className="p-8 font-mono text-sm">Loading...</div>;
+  if (!detail.data) return <div className="p-4 md:p-8 font-mono text-sm">Loading...</div>;
   const e = detail.data;
 
   return (
-    <div className="p-8 max-w-4xl space-y-6">
+    <div className="p-4 md:p-8 max-w-4xl space-y-6">
       <Link href="/app/entries" className="inline-flex items-center gap-2 font-mono text-xs text-neutral-500 hover:text-[var(--color-brand)]">
         <ArrowLeft size={14} /> BACK
       </Link>
       <div>
         <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">DAILY ENTRY</p>
-        <h1 className="font-display text-3xl font-bold tracking-tight mt-1">{new Date(e.entryDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight mt-1">{new Date(e.entryDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h1>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -37,7 +37,8 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
 
       <Section title={`ACTIVITIES (${e.activities.length})`}>
         {e.activities.length === 0 ? <Empty /> : (
-          <table className="w-full font-mono text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full font-mono text-xs min-w-[480px]">
             <thead><tr className="border-b border-neutral-200">
               <th className="text-left px-2 py-1.5">DESCRIPTION</th>
               <th className="text-right px-2 py-1.5">QUANTITY</th>
@@ -53,12 +54,14 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
               </tr>
             ))}</tbody>
           </table>
+          </div>
         )}
       </Section>
 
       <Section title={`EQUIPMENT (${e.equipment.length})`}>
         {e.equipment.length === 0 ? <Empty /> : (
-          <table className="w-full font-mono text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full font-mono text-xs min-w-[560px]">
             <thead><tr className="border-b border-neutral-200">
               <th className="text-left px-2 py-1.5">UNIT</th>
               <th className="text-right px-2 py-1.5">HM WORK</th>
@@ -78,6 +81,7 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
               </tr>
             ))}</tbody>
           </table>
+          </div>
         )}
       </Section>
 

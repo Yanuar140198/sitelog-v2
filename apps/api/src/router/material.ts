@@ -178,6 +178,17 @@ export const materialRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       await assertProjectInOrg(ctx, input.projectId);
+      const [stock] = await ctx.db.select().from(materialStock)
+        .where(and(
+          eq(materialStock.projectId, input.projectId),
+          eq(materialStock.materialCode, input.materialCode),
+        ))
+        .limit(1);
+      if (!stock) throw new TRPCError({ code: 'NOT_FOUND', message: 'Material stock row not found' });
+      const available = Number(stock.qtyReceived) - Number(stock.qtyUsed);
+      if (input.qty > available) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `Only ${available} available; cannot consume ${input.qty}` });
+      }
       const [updated] = await ctx.db.update(materialStock)
         .set({
           qtyUsed: sql`${materialStock.qtyUsed} + ${input.qty}`,

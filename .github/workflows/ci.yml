@@ -13,19 +13,67 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sitelog
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sitelog
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 11 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - uses: oven-sh/setup-bun@v2
         with: { bun-version: latest }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm db:apply  # apply full schema dump + reference seed (drizzle journal/TS/SQL diverged; the dump is the source of truth)
+      - run: pnpm test  # unit (shared) + DB-backed tenant-isolation IDOR tests
       - run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sitelog
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sitelog
+      BETTER_AUTH_SECRET: ci-stub-secret-32-bytes-long-stub-secret-key
+      SITELOG_ADMIN_EMAILS: demo@sitelog.local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:apply  # apply full schema dump + reference seed (drizzle journal/TS/SQL diverged; the dump is the source of truth)
+      - run: pnpm test:e2e:install
+      - run: pnpm test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: e2e-trace, path: test-results/ }
 
   docker-build:
     runs-on: ubuntu-latest

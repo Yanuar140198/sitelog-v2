@@ -73,6 +73,7 @@ export const ahspResource = pgTable('ahsp_resource', {
   resourceCode: varchar('resource_code', { length: 32 }).notNull(),  // L01, E10, ZB01, etc
   uraian: text('uraian').notNull(),
   koefisien: numeric('koefisien', { precision: 18, scale: 8 }).notNull(),
+  formula: text('formula'),                                   // optional: how koefisien is derived, e.g. "1 / (Q × n)"
   satuan: varchar('satuan', { length: 32 }),
   hsd: numeric('hsd', { precision: 18, scale: 2 }).notNull(),  // unit price (Harga Satuan Dasar)
 }, t => [
