@@ -25,3 +25,7 @@ playwright-report/
 backups/
 e2e/.api-key
 .claude/
+*.key
+*.pem
+*.p12
+*.pfx
