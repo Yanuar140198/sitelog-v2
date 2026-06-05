@@ -4,12 +4,14 @@ import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sparkles, FileText, Calculator, Copy, Check, Loader2, KeyRound } from 'lucide-react';
+import { Sparkles, FileText, Calculator, Copy, Check, Loader2, KeyRound, Lightbulb } from 'lucide-react';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 
-type Tool = 'report' | 'rate';
+type Tool = 'report' | 'rate' | 'suggest';
 
 export default function AiAssistantPage() {
   const [tool, setTool] = useState<Tool>('report');
+  const suggestEnabled = useFeatureFlag('ai-suggest');
 
   const status = trpc.ai.status.useQuery();
   const configured = status.data?.configured === true;
@@ -24,7 +26,7 @@ export default function AiAssistantPage() {
           <Sparkles size={20} className="text-[var(--color-brand)]" />
         </div>
         <p className="font-mono text-xs text-neutral-500 mt-2">
-          Claude-powered helpers for daily reports and rate explanations.
+          Claude-powered helpers for daily reports, AHSP rate explanations, and BOQ scope suggestions.
         </p>
       </div>
 
@@ -45,9 +47,19 @@ export default function AiAssistantPage() {
             tool === 'rate' ? 'bg-[var(--color-ink)] text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'
           }`}
         ><Calculator size={14} /> JELASKAN RATE AHSP</button>
+        {suggestEnabled && (
+          <button
+            onClick={() => setTool('suggest')}
+            className={`px-4 py-2 font-mono text-xs tracking-wider flex items-center gap-2 border-l-2 border-[var(--color-ink)] ${
+              tool === 'suggest' ? 'bg-[var(--color-ink)] text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'
+            }`}
+          ><Lightbulb size={14} /> SARAN LINGKUP BOQ</button>
+        )}
       </div>
 
-      {tool === 'report' ? <DailyReportTool disabled={!configured} /> : <ExplainRateTool disabled={!configured} />}
+      {tool === 'report' && <DailyReportTool disabled={!configured} />}
+      {tool === 'rate' && <ExplainRateTool disabled={!configured} />}
+      {tool === 'suggest' && suggestEnabled && <SuggestScopesTool disabled={!configured} />}
     </div>
   );
 }
@@ -246,6 +258,44 @@ function ExplainRateTool({ disabled }: { disabled: boolean }) {
         <div className="border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-700">{explain.error.message}</div>
       )}
       {explain.data && <ResultPanel text={explain.data.text} />}
+    </div>
+  );
+}
+
+/* ---------- Suggest BOQ scopes tool ---------- */
+function SuggestScopesTool({ disabled }: { disabled: boolean }) {
+  const [description, setDescription] = useState('');
+  const suggest = trpc.ai.suggestScopes.useMutation();
+
+  return (
+    <div className="space-y-4">
+      <div className="border-2 border-[var(--color-ink)] bg-white p-4 space-y-3">
+        <div>
+          <Label className="font-mono text-[10px] tracking-[0.2em]">DESKRIPSI PROYEK / LINGKUP</Label>
+          <textarea
+            className="w-full border border-neutral-300 px-3 py-2 font-mono text-xs bg-white min-h-[120px] resize-y"
+            placeholder="Contoh: Jalan tanah 2 km lebar 6 m — galian tanah biasa, timbunan pilihan, perkerasan agregat kelas A & B, gorong-gorong beton."
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            disabled={disabled}
+          />
+          <p className="font-mono text-[10px] text-neutral-500 mt-1">
+            Saran lingkup dipetakan ke kode AHSP yang tersedia di katalog organisasi Anda.
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          disabled={disabled || description.trim().length < 10 || suggest.isPending}
+          onClick={() => suggest.mutate({ description })}
+        >
+          {suggest.isPending ? <><Loader2 size={14} className="animate-spin" /> MENYUSUN…</> : <><Sparkles size={14} /> SARANKAN LINGKUP</>}
+        </Button>
+      </div>
+
+      {suggest.error && (
+        <div className="border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-700">{suggest.error.message}</div>
+      )}
+      {suggest.data && <ResultPanel text={suggest.data.text} />}
     </div>
   );
 }

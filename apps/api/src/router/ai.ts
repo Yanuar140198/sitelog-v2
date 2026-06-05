@@ -10,7 +10,7 @@
  * All data is org-scoped before being sent to Claude.
  */
 import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or, isNull, asc } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { router, orgProcedure, requireRole } from '../trpc.js';
 import {
@@ -23,6 +23,7 @@ import { computeAhspRate, type AhspCategory } from '../lib/ahsp-rate.js';
 import {
   DAILY_REPORT_SYSTEM, buildDailyReportUser,
   EXPLAIN_RATE_SYSTEM, buildExplainRateUser, type ExplainRateRow,
+  SUGGEST_SCOPES_SYSTEM, buildSuggestScopesUser,
 } from '../lib/ai-prompts.js';
 
 const N = (v: unknown) => Number(v ?? 0);
@@ -183,5 +184,26 @@ export const aiRouter = router({
       });
 
       return runClaude(apiKey, EXPLAIN_RATE_SYSTEM, user, 1500);
+    }),
+
+  suggestScopes: orgProcedure
+    .input(z.object({ description: z.string().min(10).max(2000) }))
+    .mutation(async ({ ctx, input }) => {
+      const apiKey = await keyOrThrow(ctx);
+      // Ground the suggestion in AHSP codes this org can actually use
+      // (org-owned items + the shared global catalog). Capped to keep the prompt bounded.
+      const catalog = await ctx.db
+        .select({ kode: ahspItem.kode, jenis: ahspItem.jenis })
+        .from(ahspItem)
+        .where(or(eq(ahspItem.organizationId, ctx.session.organizationId), isNull(ahspItem.organizationId)))
+        .orderBy(asc(ahspItem.kode))
+        .limit(200);
+
+      const user = buildSuggestScopesUser({
+        description: input.description,
+        catalog: catalog.map((c) => ({ kode: c.kode, jenis: c.jenis })),
+      });
+
+      return runClaude(apiKey, SUGGEST_SCOPES_SYSTEM, user, 2000);
     }),
 });

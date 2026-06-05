@@ -136,3 +136,38 @@ export function buildExplainRateUser(d: ExplainRateData): string {
     'Jelaskan komposisi harga satuan item ini.',
   ].join('\n');
 }
+
+// ── BOQ scope suggestion ────────────────────────────────────────────────────
+
+export const SUGGEST_SCOPES_SYSTEM = [
+  'Anda adalah estimator senior konstruksi/earthworks di Indonesia.',
+  'Tugas: dari deskripsi proyek, usulkan struktur lingkup pekerjaan (BOQ) yang relevan',
+  'dalam Bahasa Indonesia — dikelompokkan per divisi/seksi, lalu item pekerjaan di dalamnya.',
+  '',
+  'Aturan:',
+  '- Susun bertingkat: DIVISI → item pekerjaan, dengan satuan yang lazim (m3, m2, m, ls, ton).',
+  '- Bila sebuah item cocok dengan KODE AHSP yang tersedia (daftar di data), cantumkan kodenya.',
+  '- JANGAN mengarang kode AHSP yang tidak ada dalam daftar. Item tanpa kode tulis "(perlu AHSP baru)".',
+  '- Fokus pada kelengkapan & urutan kerja yang logis. Jangan mengarang volume/harga.',
+  '- Akhiri dengan catatan singkat item yang mungkin terlewat. Maksimal ~350 kata.',
+].join('\n');
+
+export interface SuggestScopesCatalogItem { kode: string; jenis: string }
+export interface SuggestScopesData {
+  description: string;
+  catalog: SuggestScopesCatalogItem[];
+}
+
+export function buildSuggestScopesUser(d: SuggestScopesData): string {
+  const lines: string[] = [];
+  lines.push('DESKRIPSI PROYEK / LINGKUP:');
+  lines.push(d.description.trim());
+  lines.push('', `KODE AHSP TERSEDIA (${d.catalog.length}):`);
+  if (d.catalog.length === 0) {
+    lines.push('- (katalog kosong — sarankan item generik tanpa kode)');
+  } else {
+    for (const c of d.catalog) lines.push(`- ${orDash(c.kode)} · ${orDash(c.jenis)}`);
+  }
+  lines.push('', 'Usulkan struktur lingkup pekerjaan BOQ untuk proyek ini.');
+  return lines.join('\n');
+}

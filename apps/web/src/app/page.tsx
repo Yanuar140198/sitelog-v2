@@ -35,7 +35,7 @@ export default function HomePage() {
         <section className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             { k: '01 · BOQ Engine', v: 'Detailed AHSP analysis with per-resource overrides (koefisien × HSD). Every number traceable. Markup + contingency + PPN built-in. Version history + XLSX/PDF export.' },
-            { k: '02 · Mobile Field Reports', v: 'Supervisors submit daily production from site. Photos + GPS evidence. Equipment HM + fuel logging. Works offline, syncs when reconnected.' },
+            { k: '02 · Mobile Field Reports', v: 'Supervisors submit daily production from site on a mobile-optimized interface. Photos + GPS evidence. Equipment HM + fuel logging.' },
             { k: '03 · Live SPI / CPI', v: 'Earned value computed from actual quantities × BOQ rates. Schedule + cost performance index per project + portfolio rollup.' },
             { k: '04 · Fleet Planning', v: 'Master equipment registry. Assign units to projects with role (Primary/Backup). IntelliTrac GPS integration for HM/odometer auto-sync.' },
             { k: '05 · Multi-tenant', v: 'Per-org workspace. RBAC (Owner/Admin/Estimator/Scheduler/Supervisor/Viewer). Email invitations. SSO ready.' },
