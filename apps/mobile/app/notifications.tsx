@@ -1,6 +1,22 @@
 import { View, Text, FlatList, Pressable } from 'react-native';
+import { router } from 'expo-router';
 import { trpc } from '@sitelog/api-client/react';
 import { useTheme } from '@/lib/theme';
+
+/**
+ * Map a web notification href (e.g. /app/projects/123) to the closest screen
+ * that exists in the mobile app. Returns null when there's no mobile equivalent
+ * (the notification is still marked read, just no navigation).
+ */
+type MobileHref = '/projects' | '/maintenance' | '/notifications' | '/settings';
+function mobileRoute(href?: string | null): MobileHref | null {
+  if (!href) return null;
+  if (href.startsWith('/app/maintenance')) return '/maintenance';
+  if (href.startsWith('/app/projects') || href.startsWith('/app/entries')) return '/projects';
+  if (href.startsWith('/app/notifications')) return '/notifications';
+  if (href.startsWith('/app/settings')) return '/settings';
+  return null;
+}
 
 export default function NotificationsScreen() {
   const { palette } = useTheme();
@@ -36,7 +52,8 @@ export default function NotificationsScreen() {
           <Pressable
             onPress={() => {
               markRead.mutate({ id: n.id });
-              // TODO: routeMap for n.href on mobile
+              const dest = mobileRoute(n.href);
+              if (dest) router.push(dest);
             }}
             style={{
               backgroundColor: palette.panel, borderWidth: 2, borderColor: palette.border,
