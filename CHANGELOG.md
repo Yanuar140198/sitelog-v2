@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.0](https://github.com/Yanuar140198/sitelog-v2/compare/v0.17.0...v0.18.0) (2026-06-05)
+
+
+### Features
+
+* **ai:** Suggest BOQ scopes tool + revive feature-flag gating ([0f183e9](https://github.com/Yanuar140198/sitelog-v2/commit/0f183e935f3e3d4f376b8cd010017e8479ae8ccd))
+* **observability:** install Sentry SDKs + harden gitignore ([150e291](https://github.com/Yanuar140198/sitelog-v2/commit/150e291370d8d19236631f9f271c17178c4d3ee0))
+
 ## [0.17.0](https://github.com/Yanuar140198/sitelog-v2/compare/v0.16.0...v0.17.0) (2026-06-05)
 
 
