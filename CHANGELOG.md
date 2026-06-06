@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.19.0](https://github.com/Yanuar140198/sitelog-v2/compare/v0.18.0...v0.19.0) (2026-06-06)
+
+
+### Features
+
+* **mobile:** notification deep-link routing (resolve last TODO) ([7f03ab0](https://github.com/Yanuar140198/sitelog-v2/commit/7f03ab0c2baab506003709c7a3e3a7fcb31b82e5))
+* **web:** wire missing action buttons across 10 pages (UX-completeness, wave 1) ([4d84415](https://github.com/Yanuar140198/sitelog-v2/commit/4d84415625be04ad0a164db9983ce7a302208b52))
+* **web:** wire missing action buttons across 11 more pages (UX-completeness, wave 2) ([02b6c26](https://github.com/Yanuar140198/sitelog-v2/commit/02b6c266c810791f8d3d82d3f912be179f57d4b0))
+
 ## [0.18.0](https://github.com/Yanuar140198/sitelog-v2/compare/v0.17.0...v0.18.0) (2026-06-05)
 
 
