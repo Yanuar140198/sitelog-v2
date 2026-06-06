@@ -6,14 +6,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Download, Search } from 'lucide-react';
 
+const PAGE_SIZE = 200;
+const MAX_LIMIT = 500; // server caps limit at 500
+
 export default function AuditPage() {
-  const [filter, setFilter] = useState({ q: '', action: '', resource: '' });
+  const [filter, setFilterState] = useState({ q: '', action: '', resource: '' });
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  // Reset paging whenever a filter changes so we start from the newest entries.
+  const setFilter = (updater: (prev: typeof filter) => typeof filter) => {
+    setFilterState(updater);
+    setLimit(PAGE_SIZE);
+  };
   const list = trpc.audit.list.useQuery({
     q: filter.q || undefined,
     action: filter.action || undefined,
     resource: filter.resource || undefined,
-    limit: 200,
+    limit,
   });
+  const rowCount = list.data?.length ?? 0;
+  // More rows may exist only if we filled the page and haven't hit the server cap.
+  const hasMore = rowCount >= limit && limit < MAX_LIMIT;
   const exportCsv = trpc.audit.exportCsv.useMutation({
     onSuccess: (data) => {
       const blob = new Blob([Uint8Array.from(atob(data.base64), c => c.charCodeAt(0))], { type: data.contentType });
@@ -77,6 +89,26 @@ export default function AuditPage() {
         </tbody>
       </table>
       </div>
+
+      {rowCount > 0 && (
+        <div className="flex flex-col items-center gap-2">
+          {hasMore ? (
+            <Button
+              variant="ghost"
+              onClick={() => setLimit(l => Math.min(l + PAGE_SIZE, MAX_LIMIT))}
+              disabled={list.isFetching}
+            >
+              {list.isFetching ? 'LOADING…' : 'LOAD MORE'}
+            </Button>
+          ) : (
+            <p className="font-mono text-xs text-neutral-400">
+              {limit >= MAX_LIMIT
+                ? `Showing first ${rowCount} entries (max). Narrow filters to see more.`
+                : `End of results — ${rowCount} entr${rowCount === 1 ? 'y' : 'ies'}.`}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

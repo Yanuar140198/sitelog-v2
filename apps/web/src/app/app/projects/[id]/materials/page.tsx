@@ -1,6 +1,8 @@
 'use client';
 import { use, useState } from 'react';
+import type { inferRouterOutputs } from '@trpc/server';
 import { trpc } from '@sitelog/api-client/react';
+import type { AppRouter } from '@sitelog/api-client';
 import { fmtIDR } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +28,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
 
   const [showAddStock, setShowAddStock] = useState(false);
   const [showAddDelivery, setShowAddDelivery] = useState(false);
+  const [editStock, setEditStock] = useState<StockRow | null>(null);
 
   async function handleConsume(materialCode: string, materialName: string) {
     const q = prompt(`Use how much "${materialName}"?`);
@@ -83,7 +86,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
                   <th className="text-left px-3 py-2 tracking-wider">SUPPLIER</th>
                   <th className="text-right px-3 py-2 tracking-wider w-[110px]">UNIT PRICE</th>
                   <th className="text-right px-3 py-2 tracking-wider w-[140px]">TOTAL VALUE</th>
-                  <th className="w-[80px]"></th>
+                  <th className="w-[130px]"></th>
                 </tr>
               </thead>
               <tbody>
@@ -104,12 +107,20 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
                       <td className="px-3 py-2 text-right">{fmtIDR(Number(s.unitPrice))}</td>
                       <td className="px-3 py-2 text-right font-bold">{fmtIDR(s.totalValue)}</td>
                       <td className="px-3 py-2">
-                        <button
-                          onClick={() => handleConsume(s.materialCode, s.materialName)}
-                          className="px-2 py-1 text-[10px] border border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-white tracking-wider"
-                        >
-                          USE
-                        </button>
+                        <div className="flex gap-1 justify-end">
+                          <button
+                            onClick={() => setEditStock(s)}
+                            className="px-2 py-1 text-[10px] border border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-white tracking-wider"
+                          >
+                            EDIT
+                          </button>
+                          <button
+                            onClick={() => handleConsume(s.materialCode, s.materialName)}
+                            className="px-2 py-1 text-[10px] border border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-white tracking-wider"
+                          >
+                            USE
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -194,9 +205,23 @@ export default function MaterialsPage({ params }: { params: Promise<{ id: string
           }}
         />
       )}
+      {editStock && (
+        <EditStockModal
+          stock={editStock}
+          onClose={() => setEditStock(null)}
+          onSubmit={async (data) => {
+            // stockUpsert upserts on (projectId, materialCode): passing the
+            // existing materialCode updates this row in place.
+            await upsertStock.mutateAsync({ projectId: id, ...data });
+            setEditStock(null);
+          }}
+        />
+      )}
     </div>
   );
 }
+
+type StockRow = inferRouterOutputs<AppRouter>['material']['stockList'][number];
 
 interface AddStockData {
   materialCode: string;
@@ -333,6 +358,65 @@ function AddDeliveryModal({ stocks, onClose, onSubmit }: {
         </div>
         <Field label="Signed By (site receiver)"><Input value={form.signedBy ?? ''} onChange={e => setForm({ ...form, signedBy: e.target.value })} /></Field>
       </div>
+      <div className="flex gap-2 justify-end mt-4">
+        <Button variant="ghost" size="sm" onClick={onClose}>CANCEL</Button>
+        <Button variant="primary" size="sm" onClick={handle} disabled={busy}>{busy ? 'Saving…' : 'SAVE'}</Button>
+      </div>
+    </Modal>
+  );
+}
+
+function EditStockModal({ stock, onClose, onSubmit }: {
+  stock: StockRow;
+  onClose: () => void;
+  onSubmit: (d: AddStockData) => Promise<void>;
+}) {
+  // Pre-fill from the existing row. materialCode is the upsert conflict key,
+  // so it is shown read-only — changing it would create a new row instead.
+  const [form, setForm] = useState<AddStockData>({
+    materialCode: stock.materialCode,
+    materialName: stock.materialName,
+    satuan: stock.satuan,
+    qtyOrdered: Number(stock.qtyOrdered),
+    supplier: stock.supplier ?? '',
+    unitPrice: Number(stock.unitPrice),
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handle() {
+    if (!form.materialName || !form.satuan) { setError('Nama, satuan required'); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await onSubmit({ ...form, supplier: form.supplier || undefined });
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to save');
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Modal title={`EDIT MATERIAL · ${stock.materialCode}`} onClose={onClose}>
+      <div className="space-y-3">
+        <Field label="Kode">
+          <Input value={form.materialCode} disabled className="opacity-60" />
+        </Field>
+        <Field label="Nama *"><Input value={form.materialName} onChange={e => setForm({ ...form, materialName: e.target.value })} /></Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Satuan *"><Input value={form.satuan} onChange={e => setForm({ ...form, satuan: e.target.value })} placeholder="LTR / SAK / M2" /></Field>
+          <Field label="Qty Ordered (PO)"><Input type="number" step="any" value={form.qtyOrdered} onChange={e => setForm({ ...form, qtyOrdered: Number(e.target.value) })} /></Field>
+        </div>
+        <Field label="Supplier"><Input value={form.supplier ?? ''} onChange={e => setForm({ ...form, supplier: e.target.value })} /></Field>
+        <Field label="Unit Price (Rp)"><Input type="number" step="any" value={form.unitPrice} onChange={e => setForm({ ...form, unitPrice: Number(e.target.value) })} /></Field>
+        <p className="font-mono text-[10px] text-neutral-500">
+          Received / used quantities are driven by deliveries and usage and can't be edited here.
+        </p>
+      </div>
+      {error && (
+        <div className="mt-3 border-2 border-red-600 bg-red-50 px-3 py-2 font-mono text-[11px] text-red-700">
+          {error}
+        </div>
+      )}
       <div className="flex gap-2 justify-end mt-4">
         <Button variant="ghost" size="sm" onClick={onClose}>CANCEL</Button>
         <Button variant="primary" size="sm" onClick={handle} disabled={busy}>{busy ? 'Saving…' : 'SAVE'}</Button>

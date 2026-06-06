@@ -4,7 +4,8 @@ import { trpc } from '@sitelog/api-client/react';
 import { fmtIDR } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, X, FileSearch, Download, History, Truck, FileStack, Users, Upload, BarChart3, Zap, ShieldAlert, Package, HardHat } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, X, FileSearch, Download, History, Truck, FileStack, Users, Upload, BarChart3, Zap, ShieldAlert, Package, HardHat, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { AhspDetailDrawer } from '@/components/boq/ahsp-detail-drawer';
 import { BoqVersionPanel } from '@/components/boq/boq-version-panel';
@@ -27,6 +28,7 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
   const [showTemplates, setShowTemplates] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const exportXlsx = trpc.export.boqXlsx.useMutation({
     onSuccess: (data) => {
@@ -108,6 +110,9 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
             <h2 className="font-display text-lg font-bold">{project.data?.name}</h2>
           </div>
           <div className="flex gap-1 flex-wrap">
+            <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)]" title="Edit Project">
+              <Pencil size={14} />
+            </button>
             <Link href={`/app/projects/${id}/schedule`} className="p-2 hover:bg-white border border-[var(--color-ink)] text-[var(--color-brand)] inline-flex items-center" title="Schedule (S-curve + Gantt + Baseline)">
               <BarChart3 size={14} />
             </Link>
@@ -240,6 +245,106 @@ export default function ProjectBoqPage({ params }: { params: Promise<{ id: strin
       {showTemplates && <TemplateBrowser projectId={id} onClose={() => setShowTemplates(false)} />}
       {showMembers && <ProjectMemberPanel projectId={id} onClose={() => setShowMembers(false)} />}
       {showImport && <XlsxImport projectId={id} onClose={() => setShowImport(false)} />}
+      {showEdit && project.data && (
+        <ProjectEditModal
+          projectId={id}
+          initial={{
+            name: project.data.name,
+            client: project.data.client ?? '',
+            location: project.data.location ?? '',
+            status: project.data.status,
+          }}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+const PROJECT_STATUSES = ['planning', 'active', 'on_hold', 'completed', 'archived'] as const;
+type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+function ProjectEditModal({
+  projectId,
+  initial,
+  onClose,
+}: {
+  projectId: string;
+  initial: { name: string; client: string; location: string; status: ProjectStatus };
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const update = trpc.project.update.useMutation({
+    onSuccess: () => { utils.project.get.invalidate({ id: projectId }); onClose(); },
+  });
+  const [name, setName] = useState(initial.name);
+  const [client, setClient] = useState(initial.client);
+  const [location, setLocation] = useState(initial.location);
+  const [status, setStatus] = useState<ProjectStatus>(initial.status);
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white border-2 border-[var(--color-ink)] w-full max-w-md max-h-[85vh] overflow-auto shadow-[8px_8px_0_var(--color-brand)]">
+        <div className="bg-[var(--color-ink)] text-white p-5 flex justify-between items-start">
+          <div>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-[var(--color-brand)] font-bold">METADATA</div>
+            <h2 className="font-display text-xl font-bold mt-1">Edit Project</h2>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/20"><X size={20} /></button>
+        </div>
+
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            update.mutate({
+              id: projectId,
+              data: {
+                name: name.trim(),
+                client: client.trim() || undefined,
+                location: location.trim() || undefined,
+                status,
+              },
+            });
+          }}
+          className="p-5 space-y-3"
+        >
+          <div>
+            <Label>Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} required placeholder="Project name" />
+          </div>
+          <div>
+            <Label>Client</Label>
+            <Input value={client} onChange={e => setClient(e.target.value)} placeholder="Client / owner" />
+          </div>
+          <div>
+            <Label>Location</Label>
+            <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
+          </div>
+          <div>
+            <Label>Status</Label>
+            <select value={status} onChange={e => setStatus(e.target.value as ProjectStatus)}
+              className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
+              {PROJECT_STATUSES.map(s => (
+                <option key={s} value={s}>{s.replace('_', ' ')}</option>
+              ))}
+            </select>
+          </div>
+
+          {update.error && (
+            <div className="border-2 border-red-600 bg-red-50 text-red-700 font-mono text-xs p-2">
+              {update.error.message}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" onClick={onClose} disabled={update.isPending}>CANCEL</Button>
+            <Button type="submit" variant="primary" disabled={update.isPending || !name.trim()}>
+              {update.isPending ? 'SAVING...' : 'SAVE'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

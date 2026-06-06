@@ -10,12 +10,13 @@ export default function ApiKeysPage() {
   const list = trpc.apiKeys.list.useQuery();
   const utils = trpc.useUtils();
   const create = trpc.apiKeys.create.useMutation({
-    onSuccess: (r: any) => { setNewKey(r.key); utils.apiKeys.list.invalidate(); setName(''); setShow(false); },
+    onSuccess: (r: any) => { setNewKey(r.key); utils.apiKeys.list.invalidate(); setName(''); setExpiresAt(''); setShow(false); },
   });
   const revoke = trpc.apiKeys.revoke.useMutation({ onSuccess: () => utils.apiKeys.list.invalidate() });
   const [show, setShow] = useState(false);
   const [name, setName] = useState('');
   const [scope, setScope] = useState<'read' | 'write' | 'admin'>('read');
+  const [expiresAt, setExpiresAt] = useState('');
   const [newKey, setNewKey] = useState<string | null>(null);
 
   return (
@@ -44,6 +45,7 @@ export default function ApiKeysPage() {
             <th className="text-left px-3 py-2 tracking-wider">PREFIX</th>
             <th className="text-left px-3 py-2 tracking-wider">SCOPE</th>
             <th className="text-left px-3 py-2 tracking-wider">LAST USED</th>
+            <th className="text-left px-3 py-2 tracking-wider">EXPIRES</th>
             <th className="text-left px-3 py-2 tracking-wider">STATUS</th>
             <th className="w-16"></th>
           </tr>
@@ -55,6 +57,7 @@ export default function ApiKeysPage() {
               <td className="px-3 py-2"><code>{k.prefix}...</code></td>
               <td className="px-3 py-2 uppercase">{k.scope}</td>
               <td className="px-3 py-2 text-neutral-500">{k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString('id-ID') : 'Never'}</td>
+              <td className="px-3 py-2 text-neutral-500">{k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('id-ID') : 'Never'}</td>
               <td className="px-3 py-2">
                 {k.revokedAt ? <span className="px-2 py-0.5 bg-red-200 text-red-700 text-[10px] font-bold">REVOKED</span>
                   : <span className="px-2 py-0.5 bg-green-200 text-green-700 text-[10px] font-bold">ACTIVE</span>}
@@ -67,7 +70,7 @@ export default function ApiKeysPage() {
             </tr>
           ))}
           {list.data?.length === 0 && (
-            <tr><td colSpan={6} className="text-center py-12 text-neutral-500">No API keys yet. Create one for CI integration, Zapier, scripts.</td></tr>
+            <tr><td colSpan={7} className="text-center py-12 text-neutral-500">No API keys yet. Create one for CI integration, Zapier, scripts.</td></tr>
           )}
         </tbody>
       </table>
@@ -81,7 +84,7 @@ export default function ApiKeysPage() {
               <KeyRound size={20} className="text-[var(--color-brand)]" />
               <h2 className="font-display text-2xl font-bold">New API Key</h2>
             </div>
-            <form onSubmit={e => { e.preventDefault(); create.mutate({ name, scope }); }} className="space-y-3">
+            <form onSubmit={e => { e.preventDefault(); create.mutate({ name, scope, expiresAt: expiresAt ? new Date(expiresAt) : undefined }); }} className="space-y-3">
               <div><Label>Name *</Label><Input required value={name} onChange={e => setName(e.target.value)} placeholder="Production CI" /></div>
               <div><Label>Scope</Label>
                 <select value={scope} onChange={e => setScope(e.target.value as any)}
@@ -91,6 +94,7 @@ export default function ApiKeysPage() {
                   <option value="admin">admin (org admin)</option>
                 </select>
               </div>
+              <div><Label>Expires at</Label><Input type="date" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} /><p className="font-mono text-[10px] text-neutral-500 mt-1">Leave blank for a key that never expires.</p></div>
               <div className="flex gap-2 mt-4">
                 <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
                 <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>

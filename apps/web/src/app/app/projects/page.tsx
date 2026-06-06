@@ -10,7 +10,10 @@ export default function ProjectsPage() {
   const utils = trpc.useUtils();
   const bulkArchive = trpc.project.bulkArchive.useMutation({ onSuccess: () => { utils.project.list.invalidate(); setSelected(new Set()); } });
   const bulkStatus = trpc.project.bulkUpdateStatus.useMutation({ onSuccess: () => { utils.project.list.invalidate(); setSelected(new Set()); } });
+  const rowStatus = trpc.project.bulkUpdateStatus.useMutation({ onSuccess: () => { utils.project.list.invalidate(); setMenuOpen(null); } });
+  const rowDelete = trpc.project.archive.useMutation({ onSuccess: () => { utils.project.list.invalidate(); setMenuOpen(null); } });
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   function toggle(id: string) {
     setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
@@ -61,6 +64,32 @@ export default function ProjectsPage() {
             <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)}
               onClick={e => e.stopPropagation()}
               className="absolute top-2 left-2 z-10 w-4 h-4 accent-[var(--color-brand)]" />
+            <div className="absolute top-2 right-2 z-20">
+              <button type="button" aria-label="Row actions"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(o => o === p.id ? null : p.id); }}
+                className="w-7 h-7 flex items-center justify-center border-2 border-[var(--color-ink)] bg-white font-mono text-sm leading-none hover:bg-neutral-100">
+                ⋮
+              </button>
+              {menuOpen === p.id && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(null); }} />
+                  <div className="absolute right-0 mt-1 z-20 w-36 border-2 border-[var(--color-ink)] bg-white shadow-[4px_4px_0_var(--color-ink)]">
+                    <button type="button"
+                      disabled={p.status === 'archived' || rowStatus.isPending}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); rowStatus.mutate({ ids: [p.id], status: 'archived' }); }}
+                      className="block w-full text-left px-3 py-2 font-mono text-xs hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed">
+                      ARCHIVE
+                    </button>
+                    <button type="button"
+                      disabled={rowDelete.isPending}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); if (confirm(`Delete project ${p.code}? This cannot be undone.`)) rowDelete.mutate({ id: p.id }); }}
+                      className="block w-full text-left px-3 py-2 font-mono text-xs text-red-600 border-t-2 border-[var(--color-ink)] hover:bg-red-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
+                      DELETE
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <Link href={`/app/projects/${p.id}` as any}
               className="block p-5 hover:shadow-[4px_4px_0_var(--color-brand)] transition">
             <div className="flex items-center justify-between pl-6">

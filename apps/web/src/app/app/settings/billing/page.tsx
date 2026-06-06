@@ -15,6 +15,21 @@ export default function BillingPage() {
   const sub = current.data?.subscription;
   const org = current.data?.organization;
 
+  // Plan ordering, used to label a switch as Upgrade vs Downgrade.
+  const PLAN_RANK: Record<string, number> = { starter: 0, pro: 1, enterprise: 2 };
+  const pending = checkout.isPending || portal.isPending;
+
+  // An existing subscriber switching plans (up OR down) goes through the Stripe
+  // billing portal, where proration/downgrades are handled correctly. Checkout
+  // is only for starting a brand-new subscription (and the enterprise mailto).
+  const changePlan = (planKey: string) => {
+    if (sub && planKey !== 'enterprise') {
+      portal.mutate();
+    } else {
+      checkout.mutate({ plan: planKey as any });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="border-2 border-[var(--color-ink)] bg-white">
@@ -50,10 +65,22 @@ export default function BillingPage() {
               <li>▸ All features</li>
               <li>▸ Email support</li>
             </ul>
-            <Button onClick={() => checkout.mutate({ plan: p.key as any })} disabled={checkout.isPending || sub?.plan === p.key}
-              variant={sub?.plan === p.key ? 'secondary' : 'primary'} className="w-full mt-5">
-              {sub?.plan === p.key ? 'CURRENT' : `CHOOSE ${p.name.toUpperCase()}`}
-            </Button>
+            {(() => {
+              const isCurrent = sub?.plan === p.key;
+              const currentRank = sub ? PLAN_RANK[sub.plan] ?? -1 : -1;
+              const targetRank = PLAN_RANK[p.key] ?? 0;
+              const action = !sub
+                ? `CHOOSE ${p.name.toUpperCase()}`
+                : targetRank > currentRank
+                ? `UPGRADE TO ${p.name.toUpperCase()}`
+                : `DOWNGRADE TO ${p.name.toUpperCase()}`;
+              return (
+                <Button onClick={() => changePlan(p.key)} disabled={pending || isCurrent}
+                  variant={isCurrent ? 'secondary' : 'primary'} className="w-full mt-5">
+                  {isCurrent ? 'CURRENT' : action}
+                </Button>
+              );
+            })()}
           </div>
         ))}
       </div>

@@ -215,6 +215,17 @@ interface FormState {
 function CrewDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const detail = trpc.crew.get.useQuery({ id });
   const [editing, setEditing] = useState(false);
+  const utils = trpc.useUtils();
+
+  const projects = trpc.project.list.useQuery(undefined);
+  const refresh = () => { utils.crew.get.invalidate({ id }); utils.crew.list.invalidate(); };
+  const assign = trpc.crew.assignToProject.useMutation({ onSuccess: refresh });
+  const unassign = trpc.crew.unassignFromProject.useMutation({ onSuccess: refresh });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [assignForm, setAssignForm] = useState<{
+    projectId: string; fromDate: string; toDate: string; roleOverride: Role | ''; dailyRateOverride: string;
+  }>({ projectId: '', fromDate: today, toDate: '', roleOverride: '', dailyRateOverride: '' });
 
   const initial = useMemo<Partial<FormState> | undefined>(() => {
     if (!detail.data) return undefined;
@@ -279,6 +290,7 @@ function CrewDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                       <th className="text-left px-2 py-1.5 tracking-wider">FROM</th>
                       <th className="text-left px-2 py-1.5 tracking-wider">TO</th>
                       <th className="text-right px-2 py-1.5 tracking-wider">RATE</th>
+                      <th className="w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -290,12 +302,74 @@ function CrewDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                         <td className="px-2 py-1.5 text-right">
                           {a.dailyRateOverride ? fmtIDR(Number(a.dailyRateOverride)) : <span className="text-neutral-400">base</span>}
                         </td>
+                        <td className="px-2 py-1.5 text-right">
+                          <button
+                            onClick={() => { if (confirm(`Unassign from ${a.projectCode}?`)) unassign.mutate({ assignmentId: a.id }); }}
+                            disabled={unassign.isPending}
+                            className="p-1 hover:bg-red-50 text-red-600 disabled:opacity-50" title="Unassign">
+                            <Trash2 size={12} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 </div>
               )}
+              {unassign.error && (
+                <p className="font-mono text-[11px] text-red-600 mt-2">{unassign.error.message}</p>
+              )}
+
+              <div className="mt-4 border-t-2 border-dashed border-neutral-300 pt-4">
+                <h4 className="font-mono text-[11px] tracking-[0.15em] text-neutral-500 mb-2">ASSIGN TO PROJECT</h4>
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    if (!assignForm.projectId) return;
+                    const rate = assignForm.dailyRateOverride.trim();
+                    assign.mutate({
+                      crewMemberId: id,
+                      projectId: assignForm.projectId,
+                      fromDate: assignForm.fromDate,
+                      toDate: assignForm.toDate || undefined,
+                      roleOverride: assignForm.roleOverride || undefined,
+                      dailyRateOverride: rate !== '' ? Number(rate) : undefined,
+                    }, {
+                      onSuccess: () => setAssignForm({ projectId: '', fromDate: today, toDate: '', roleOverride: '', dailyRateOverride: '' }),
+                    });
+                  }}
+                  className="grid grid-cols-2 gap-2 font-mono text-xs">
+                  <div className="col-span-2">
+                    <Label>Project *</Label>
+                    <select required value={assignForm.projectId}
+                      onChange={e => setAssignForm(p => ({ ...p, projectId: e.target.value }))}
+                      className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
+                      <option value="">{projects.isLoading ? 'Loading…' : 'Select project'}</option>
+                      {projects.data?.map(p => (
+                        <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div><Label>From *</Label><Input type="date" required value={assignForm.fromDate} onChange={e => setAssignForm(p => ({ ...p, fromDate: e.target.value }))} /></div>
+                  <div><Label>To</Label><Input type="date" value={assignForm.toDate} onChange={e => setAssignForm(p => ({ ...p, toDate: e.target.value }))} /></div>
+                  <div>
+                    <Label>Role Override</Label>
+                    <select value={assignForm.roleOverride}
+                      onChange={e => setAssignForm(p => ({ ...p, roleOverride: e.target.value as Role | '' }))}
+                      className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
+                      <option value="">(base role)</option>
+                      {ROLES.map(r => <option key={r} value={r}>{r.toUpperCase()}</option>)}
+                    </select>
+                  </div>
+                  <div><Label>Daily Rate Override (Rp)</Label><Input type="number" min={0} value={assignForm.dailyRateOverride} onChange={e => setAssignForm(p => ({ ...p, dailyRateOverride: e.target.value }))} placeholder="base" /></div>
+                  <div className="col-span-2 flex items-center gap-2 mt-1">
+                    <Button type="submit" variant="primary" disabled={assign.isPending || !assignForm.projectId}>
+                      <Plus size={13} /> ASSIGN
+                    </Button>
+                    {assign.error && <span className="text-[11px] text-red-600">{assign.error.message}</span>}
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}

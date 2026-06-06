@@ -8,7 +8,7 @@
 import { use, useState } from 'react';
 import { trpc } from '@sitelog/api-client/react';
 import Link from 'next/link';
-import { ShieldAlert, Plus, X, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, Plus, X, ArrowLeft, Filter } from 'lucide-react';
 
 const SEVERITIES = [
   { key: 'near_miss', label: 'NEAR MISS', tone: 'bg-yellow-200 text-yellow-900' },
@@ -41,13 +41,23 @@ function statusBadge(s: string) {
 
 export default function HsePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const [statusFilter, setStatusFilter] = useState<Status | ''>('');
+  const [severityFilter, setSeverityFilter] = useState<Severity | ''>('');
+
   const project = trpc.project.get.useQuery({ id });
   const summary = trpc.hse.summary.useQuery({ projectId: id });
-  const list = trpc.hse.list.useQuery({ projectId: id });
+  const list = trpc.hse.list.useQuery({
+    projectId: id,
+    status: statusFilter || undefined,
+    severity: severityFilter || undefined,
+  });
   const utils = trpc.useUtils();
 
   const [showNew, setShowNew] = useState(false);
   const [drawerId, setDrawerId] = useState<string | null>(null);
+
+  const hasFilter = statusFilter !== '' || severityFilter !== '';
+  const clearFilters = () => { setStatusFilter(''); setSeverityFilter(''); };
 
   const create = trpc.hse.create.useMutation({
     onSuccess: () => {
@@ -124,14 +134,71 @@ export default function HsePage({ params }: { params: Promise<{ id: string }> })
         </div>
       </section>
 
+      {/* Filters */}
+      <section className="px-4 md:px-6 pb-4">
+        <div className="bg-white border-2 border-[var(--color-ink)] px-3 py-2.5 flex items-center gap-3 flex-wrap font-mono text-[10px]">
+          <span className="flex items-center gap-1.5 tracking-wider text-neutral-500 font-bold">
+            <Filter size={12} /> FILTER
+          </span>
+          <label className="flex items-center gap-1.5">
+            <span className="tracking-wider text-neutral-600 font-bold">STATUS</span>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as Status | '')}
+              className="border border-[var(--color-ink)] px-2 py-1 bg-white"
+            >
+              <option value="">ALL</option>
+              {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="tracking-wider text-neutral-600 font-bold">SEVERITY</span>
+            <select
+              value={severityFilter}
+              onChange={e => setSeverityFilter(e.target.value as Severity | '')}
+              className="border border-[var(--color-ink)] px-2 py-1 bg-white"
+            >
+              <option value="">ALL</option>
+              {SEVERITIES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+          </label>
+          {hasFilter && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 border border-[var(--color-ink)] px-2 py-1 tracking-wider font-bold hover:bg-neutral-100"
+            >
+              <X size={11} /> CLEAR
+            </button>
+          )}
+          <span className="ml-auto tracking-wider text-neutral-500">
+            {list.data ? `${list.data.length} SHOWN${hasFilter ? ' (FILTERED)' : ''}` : ''}
+          </span>
+        </div>
+      </section>
+
       {/* Table */}
       <section className="px-4 md:px-6 pb-10">
         <div className="bg-white border-2 border-[var(--color-ink)] overflow-x-auto">
           {!list.data?.length ? (
             <div className="p-16 text-center">
               <ShieldAlert size={48} className="mx-auto text-[var(--color-brand)]" />
-              <h3 className="font-display text-xl font-bold mt-4">No incidents recorded</h3>
-              <p className="font-mono text-xs text-neutral-500 mt-2">Hit + NEW INCIDENT to log a near-miss, injury, or environmental event.</p>
+              {hasFilter ? (
+                <>
+                  <h3 className="font-display text-xl font-bold mt-4">No matching incidents</h3>
+                  <p className="font-mono text-xs text-neutral-500 mt-2">No incidents match the selected filters.</p>
+                  <button
+                    onClick={clearFilters}
+                    className="mt-4 inline-flex items-center gap-1 border border-[var(--color-ink)] px-3 py-1.5 font-mono text-xs tracking-wider font-bold hover:bg-neutral-100"
+                  >
+                    <X size={12} /> CLEAR FILTERS
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-display text-xl font-bold mt-4">No incidents recorded</h3>
+                  <p className="font-mono text-xs text-neutral-500 mt-2">Hit + NEW INCIDENT to log a near-miss, injury, or environmental event.</p>
+                </>
+              )}
             </div>
           ) : (
             <table className="w-full min-w-[680px] font-mono text-xs">
