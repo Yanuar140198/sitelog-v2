@@ -13,12 +13,16 @@ export default function MaintenancePage() {
   const units = trpc.fleet.unitList.useQuery();
   const utils = trpc.useUtils();
   const create = trpc.maintenance.create.useMutation({ onSuccess: () => { utils.maintenance.upcoming.invalidate(); reset(); setShow(false); } });
-  const complete = trpc.maintenance.markCompleted.useMutation({ onSuccess: () => utils.maintenance.upcoming.invalidate() });
+  const complete = trpc.maintenance.markCompleted.useMutation({ onSuccess: () => { utils.maintenance.upcoming.invalidate(); setCompleteTarget(null); } });
   const cancel = trpc.maintenance.cancel.useMutation({ onSuccess: () => utils.maintenance.upcoming.invalidate() });
   const [show, setShow] = useState(false);
   const [form, setForm] = useState({ unitId: '', kind: 'scheduled' as typeof KIND[number], title: '', description: '', dueAtDate: '', dueAtHm: '', intervalDays: '', intervalHm: '' });
   function reset() { setForm({ unitId: '', kind: 'scheduled', title: '', description: '', dueAtDate: '', dueAtHm: '', intervalDays: '', intervalHm: '' }); }
   function set<K extends keyof typeof form>(k: K, v: any) { setForm(p => ({ ...p, [k]: v })); }
+
+  const [completeTarget, setCompleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [completeForm, setCompleteForm] = useState({ performedAtHm: '', cost: '', note: '' });
+  function openComplete(id: string, title: string) { setCompleteForm({ performedAtHm: '', cost: '', note: '' }); setCompleteTarget({ id, title }); }
 
   const overdue = (upcoming.data ?? []).filter(r => r.m.status === 'overdue' || (r.m.dueAtDate && new Date(r.m.dueAtDate) < new Date()));
   const planned = (upcoming.data ?? []).filter(r => !overdue.includes(r));
@@ -38,14 +42,14 @@ export default function MaintenancePage() {
 
       {overdue.length > 0 && (
         <Section title={`⚠ OVERDUE (${overdue.length})`} severity="red">
-          <Table rows={overdue} onComplete={(id, hm, cost) => complete.mutate({ id, performedAtHm: hm, cost })} onCancel={id => cancel.mutate({ id })} />
+          <Table rows={overdue} onComplete={openComplete} onCancel={id => cancel.mutate({ id })} />
         </Section>
       )}
 
       <Section title={`UPCOMING (${planned.length})`} severity="default">
         {planned.length === 0
           ? <div className="text-center py-12 text-neutral-500 font-mono text-xs">No upcoming maintenance.</div>
-          : <Table rows={planned} onComplete={(id, hm, cost) => complete.mutate({ id, performedAtHm: hm, cost })} onCancel={id => cancel.mutate({ id })} />}
+          : <Table rows={planned} onComplete={openComplete} onCancel={id => cancel.mutate({ id })} />}
       </Section>
 
       {show && (
@@ -94,6 +98,34 @@ export default function MaintenancePage() {
           </div>
         </div>
       )}
+
+      {completeTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
+          onClick={e => { if (e.target === e.currentTarget) setCompleteTarget(null); }}>
+          <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
+            <h2 className="font-display text-2xl font-bold mb-1">Mark Completed</h2>
+            <p className="font-mono text-xs text-neutral-500 mb-4">{completeTarget.title}</p>
+            <form onSubmit={e => {
+              e.preventDefault();
+              complete.mutate({
+                id: completeTarget.id,
+                performedAtHm: completeForm.performedAtHm ? Number(completeForm.performedAtHm) : undefined,
+                cost: completeForm.cost ? Number(completeForm.cost) : undefined,
+                note: completeForm.note || undefined,
+              });
+            }} className="grid grid-cols-1 gap-3">
+              <div><Label>Performed HM</Label><Input type="number" value={completeForm.performedAtHm} onChange={e => setCompleteForm(p => ({ ...p, performedAtHm: e.target.value }))} placeholder="5200" /></div>
+              <div><Label>Cost (Rp)</Label><Input type="number" value={completeForm.cost} onChange={e => setCompleteForm(p => ({ ...p, cost: e.target.value }))} placeholder="1500000" /></div>
+              <div><Label>Note</Label><Input value={completeForm.note} onChange={e => setCompleteForm(p => ({ ...p, note: e.target.value }))} placeholder="Oli + filter diganti" /></div>
+              {complete.error && <div className="text-red-600 text-xs font-mono">{complete.error.message}</div>}
+              <div className="flex gap-2 mt-2">
+                <Button type="submit" variant="primary" disabled={complete.isPending}>COMPLETE</Button>
+                <Button type="button" onClick={() => setCompleteTarget(null)}>CANCEL</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -107,7 +139,7 @@ function Section({ title, severity, children }: { title: string; severity: 'red'
   );
 }
 
-function Table({ rows, onComplete, onCancel }: { rows: any[]; onComplete: (id: string, hm?: number, cost?: number) => void; onCancel: (id: string) => void }) {
+function Table({ rows, onComplete, onCancel }: { rows: any[]; onComplete: (id: string, title: string) => void; onCancel: (id: string) => void }) {
   return (
     <div className="overflow-x-auto">
     <table className="w-full font-mono text-xs min-w-[560px]">
@@ -131,7 +163,7 @@ function Table({ rows, onComplete, onCancel }: { rows: any[]; onComplete: (id: s
               {r.m.dueAtHm && ` · ${r.m.dueAtHm} HM`}
             </td>
             <td className="px-3 py-2 text-right">
-              <button onClick={() => { const hm = prompt('Performed at HM?'); onComplete(r.m.id, hm ? Number(hm) : undefined); }}
+              <button onClick={() => onComplete(r.m.id, r.m.title)}
                 className="p-1 text-green-600 hover:bg-green-50" title="Mark completed"><CheckCircle2 size={14} /></button>
               <button onClick={() => confirm('Cancel?') && onCancel(r.m.id)}
                 className="p-1 text-red-600 hover:bg-red-50" title="Cancel"><X size={14} /></button>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { subscribeWebPush } from '@/lib/web-push';
-import { Bell, BellOff, Plus, Send, Trash2, X } from 'lucide-react';
+import { Bell, BellOff, Pencil, Plus, Send, Trash2, X } from 'lucide-react';
 
 const CHANNEL_TYPES = [
   { value: 'slack', label: 'Slack' },
@@ -22,6 +22,16 @@ const CHANNEL_EVENTS = [
 
 type ChannelType = (typeof CHANNEL_TYPES)[number]['value'];
 type ChannelEvent = (typeof CHANNEL_EVENTS)[number]['value'];
+
+type ChannelRow = {
+  id: string;
+  name: string;
+  channelType: string;
+  webhookUrl?: string | null;
+  emailAddress?: string | null;
+  events?: string[] | null;
+  enabled: boolean;
+};
 
 export default function NotificationsSettings() {
   const prefs = trpc.notification.preferences.useQuery();
@@ -61,6 +71,7 @@ export default function NotificationsSettings() {
 
   const [pushStatus, setPushStatus] = useState<string>('');
   const [showAdd, setShowAdd] = useState(false);
+  const [editChannel, setEditChannel] = useState<ChannelRow | null>(null);
   const [testStatus, setTestStatus] = useState<Record<string, string>>({});
 
   async function enableWebPush() {
@@ -170,6 +181,13 @@ export default function NotificationsSettings() {
                         onChange={v => updateChannel.mutate({ id: c.id, enabled: v })}
                       />
                       <button
+                        onClick={() => setEditChannel(c as ChannelRow)}
+                        className="border border-[var(--color-ink)] px-2 py-1 hover:bg-[var(--color-ink)] hover:text-white"
+                        title="Edit channel"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
                         onClick={() => onTest(c.id)}
                         className="border border-[var(--color-ink)] px-2 py-1 hover:bg-[var(--color-ink)] hover:text-white"
                         title="Send test"
@@ -198,6 +216,18 @@ export default function NotificationsSettings() {
           submitting={createChannel.isPending}
           onSubmit={async input => {
             await createChannel.mutateAsync(input);
+          }}
+        />
+      )}
+
+      {editChannel && (
+        <EditChannelModal
+          channel={editChannel}
+          onClose={() => setEditChannel(null)}
+          submitting={updateChannel.isPending}
+          onSubmit={async input => {
+            await updateChannel.mutateAsync(input);
+            setEditChannel(null);
           }}
         />
       )}
@@ -308,6 +338,117 @@ function AddChannelModal({
             <Button type="button" onClick={onClose} variant="secondary">CANCEL</Button>
             <Button type="submit" variant="primary" disabled={submitting}>
               {submitting ? 'SAVING…' : 'CREATE'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditChannelModal({
+  channel,
+  onClose,
+  onSubmit,
+  submitting,
+}: {
+  channel: ChannelRow;
+  onClose: () => void;
+  onSubmit: (input: {
+    id: string;
+    name?: string;
+    webhookUrl?: string | null;
+    emailAddress?: string | null;
+    events?: ChannelEvent[];
+    enabled?: boolean;
+  }) => Promise<void>;
+  submitting: boolean;
+}) {
+  const isEmail = channel.channelType === 'email';
+  const typeLabel = CHANNEL_TYPES.find(t => t.value === channel.channelType)?.label ?? channel.channelType;
+  const knownEvents = new Set(CHANNEL_EVENTS.map(e => e.value as string));
+
+  const [name, setName] = useState(channel.name);
+  const [target, setTarget] = useState(isEmail ? (channel.emailAddress ?? '') : (channel.webhookUrl ?? ''));
+  const [events, setEvents] = useState<ChannelEvent[]>(
+    ((channel.events ?? []) as string[]).filter(e => knownEvents.has(e)) as ChannelEvent[],
+  );
+  const [err, setErr] = useState('');
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr('');
+    if (!name.trim()) { setErr('Name is required'); return; }
+    if (!target.trim()) { setErr(isEmail ? 'Email is required' : 'Webhook URL is required'); return; }
+    if (events.length === 0) { setErr('Select at least one event'); return; }
+    try {
+      await onSubmit({
+        id: channel.id,
+        name: name.trim(),
+        webhookUrl: isEmail ? undefined : target.trim(),
+        emailAddress: isEmail ? target.trim() : undefined,
+        events,
+      });
+    } catch (e: any) {
+      setErr(e.message ?? 'Failed to update');
+    }
+  }
+
+  function toggleEvent(ev: ChannelEvent) {
+    setEvents(prev => prev.includes(ev) ? prev.filter(x => x !== ev) : [...prev, ev]);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white border-2 border-[var(--color-ink)] w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-4 py-2 bg-[var(--color-ink)] text-white font-mono text-xs tracking-[0.2em] flex justify-between items-center">
+          <span>EDIT CHANNEL</span>
+          <button onClick={onClose} className="hover:text-[var(--color-brand)]"><X size={14} /></button>
+        </div>
+        <form onSubmit={submit} className="p-5 space-y-3">
+          <div>
+            <Label>Type</Label>
+            <div className="w-full border-2 border-[var(--color-ink)] px-3 py-2 font-mono text-sm bg-neutral-100 text-neutral-600">
+              {typeLabel}
+            </div>
+          </div>
+          <div>
+            <Label>Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Site supervisor Slack" />
+          </div>
+          <div>
+            <Label>{isEmail ? 'Email address' : 'Webhook URL'}</Label>
+            <Input
+              type={isEmail ? 'email' : 'url'}
+              value={target}
+              onChange={e => setTarget(e.target.value)}
+              placeholder={isEmail ? 'ops@example.com' : 'https://hooks.slack.com/services/...'}
+            />
+          </div>
+          <div>
+            <Label>Events</Label>
+            <div className="space-y-1 mt-1">
+              {CHANNEL_EVENTS.map(ev => (
+                <label key={ev.value} className="flex items-center gap-2 font-mono text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={events.includes(ev.value)}
+                    onChange={() => toggleEvent(ev.value)}
+                    className="accent-[var(--color-brand)]"
+                  />
+                  <span>{ev.label} <span className="text-neutral-500">({ev.value})</span></span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {err && <div className="font-mono text-xs text-red-600">{err}</div>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" onClick={onClose} variant="secondary">CANCEL</Button>
+            <Button type="submit" variant="primary" disabled={submitting}>
+              {submitting ? 'SAVING…' : 'SAVE'}
             </Button>
           </div>
         </form>

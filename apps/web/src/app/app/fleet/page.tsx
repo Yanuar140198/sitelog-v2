@@ -4,21 +4,42 @@ import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Pencil } from 'lucide-react';
+
+const emptyForm = { nomor: '', fleet: '', jenisAlat: '', brand: '', model: '', capacity: '', vendor: '', ratePerHour: 0 };
 
 export default function FleetPage() {
   const units = trpc.fleet.unitList.useQuery();
+  type FleetUnit = NonNullable<typeof units.data>[number];
   const utils = trpc.useUtils();
   const create = trpc.fleet.unitCreate.useMutation({
-    onSuccess: () => { utils.fleet.unitList.invalidate(); setShow(false); reset(); },
+    onSuccess: () => { utils.fleet.unitList.invalidate(); close(); },
+  });
+  const update = trpc.fleet.unitUpdate.useMutation({
+    onSuccess: () => { utils.fleet.unitList.invalidate(); close(); },
   });
   const del = trpc.fleet.unitDelete.useMutation({
     onSuccess: () => utils.fleet.unitList.invalidate(),
   });
   const [show, setShow] = useState(false);
-  const [form, setForm] = useState({ nomor: '', fleet: '', jenisAlat: '', brand: '', model: '', capacity: '', vendor: '', ratePerHour: 0 });
-  function reset() { setForm({ nomor: '', fleet: '', jenisAlat: '', brand: '', model: '', capacity: '', vendor: '', ratePerHour: 0 }); }
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...emptyForm });
   function set<K extends keyof typeof form>(k: K, v: any) { setForm(p => ({ ...p, [k]: v })); }
+  function close() { setShow(false); setEditId(null); setForm({ ...emptyForm }); create.reset(); update.reset(); }
+  function openCreate() { setEditId(null); setForm({ ...emptyForm }); create.reset(); update.reset(); setShow(true); }
+  function openEdit(u: FleetUnit) {
+    setEditId(u.id);
+    setForm({
+      nomor: u.nomor ?? '', fleet: u.fleet ?? '', jenisAlat: u.jenisAlat ?? '',
+      brand: u.brand ?? '', model: u.model ?? '', capacity: u.capacity ?? '',
+      vendor: u.vendor ?? '', ratePerHour: u.ratePerHour ? Number(u.ratePerHour) : 0,
+    });
+    create.reset(); update.reset(); setShow(true);
+  }
+  function submit() {
+    if (editId) update.mutate({ id: editId, data: { ...form, ratePerHour: Number(form.ratePerHour) || undefined } });
+    else create.mutate({ ...form, ratePerHour: Number(form.ratePerHour) || undefined });
+  }
 
   // Summary by jenisAlat
   const byType = new Map<string, number>();
@@ -31,7 +52,7 @@ export default function FleetPage() {
           <p className="font-mono text-xs tracking-[0.2em] text-[var(--color-brand)]">EQUIPMENT</p>
           <h1 className="font-display text-2xl md:text-4xl font-bold tracking-tight mt-1">Fleet Master</h1>
         </div>
-        <Button variant="primary" onClick={() => setShow(true)}><Plus size={14} /> ADD UNIT</Button>
+        <Button variant="primary" onClick={openCreate}><Plus size={14} /> ADD UNIT</Button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -52,7 +73,7 @@ export default function FleetPage() {
             <th className="text-left px-3 py-2 tracking-wider">BRAND/MODEL</th>
             <th className="text-left px-3 py-2 tracking-wider">VENDOR</th>
             <th className="text-right px-3 py-2 tracking-wider">RATE/HR</th>
-            <th className="w-16"></th>
+            <th className="w-24"></th>
           </tr>
         </thead>
         <tbody>
@@ -64,7 +85,8 @@ export default function FleetPage() {
               <td className="px-3 py-2">{[u.brand, u.model].filter(Boolean).join(' ')}</td>
               <td className="px-3 py-2">{u.vendor ?? '—'}</td>
               <td className="px-3 py-2 text-right">{u.ratePerHour ? `Rp ${Number(u.ratePerHour).toLocaleString('id-ID')}` : '—'}</td>
-              <td className="px-3 py-2 text-center">
+              <td className="px-3 py-2 text-center whitespace-nowrap">
+                <button onClick={() => openEdit(u)} className="p-1 text-[var(--color-ink)] hover:bg-neutral-100"><Pencil size={14} /></button>
                 <button onClick={() => confirm('Delete unit?') && del.mutate({ id: u.id })} className="p-1 text-red-600 hover:bg-red-50"><X size={14} /></button>
               </td>
             </tr>
@@ -78,10 +100,10 @@ export default function FleetPage() {
 
       {show && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
-          onClick={e => { if (e.target === e.currentTarget) setShow(false); }}>
+          onClick={e => { if (e.target === e.currentTarget) close(); }}>
           <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
-            <h2 className="font-display text-2xl font-bold mb-4">Add Unit</h2>
-            <form onSubmit={e => { e.preventDefault(); create.mutate({ ...form, ratePerHour: Number(form.ratePerHour) || undefined }); }}
+            <h2 className="font-display text-2xl font-bold mb-4">{editId ? 'Edit Unit' : 'Add Unit'}</h2>
+            <form onSubmit={e => { e.preventDefault(); submit(); }}
               className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>Nomor *</Label><Input required value={form.nomor} onChange={e => set('nomor', e.target.value)} /></div>
               <div><Label>Jenis Alat</Label><Input value={form.jenisAlat} onChange={e => set('jenisAlat', e.target.value)} placeholder="DT, EX, ADT" /></div>
@@ -91,10 +113,10 @@ export default function FleetPage() {
               <div><Label>Model</Label><Input value={form.model} onChange={e => set('model', e.target.value)} /></div>
               <div><Label>Capacity</Label><Input value={form.capacity} onChange={e => set('capacity', e.target.value)} placeholder="30T" /></div>
               <div><Label>Rate / Hour (Rp)</Label><Input type="number" value={form.ratePerHour} onChange={e => set('ratePerHour', Number(e.target.value))} /></div>
-              {create.error && <div className="sm:col-span-2 text-red-600 text-xs font-mono">{create.error.message}</div>}
+              {(create.error || update.error) && <div className="sm:col-span-2 text-red-600 text-xs font-mono">{(create.error ?? update.error)?.message}</div>}
               <div className="sm:col-span-2 flex gap-2 mt-3">
-                <Button type="submit" variant="primary" disabled={create.isPending}>CREATE</Button>
-                <Button type="button" onClick={() => setShow(false)}>CANCEL</Button>
+                <Button type="submit" variant="primary" disabled={create.isPending || update.isPending}>{editId ? 'SAVE' : 'CREATE'}</Button>
+                <Button type="button" onClick={close}>CANCEL</Button>
               </div>
             </form>
           </div>

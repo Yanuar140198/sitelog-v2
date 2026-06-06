@@ -184,6 +184,7 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   const deleteKoefisien = ahspMut.deleteKoefisien?.useMutation(mkOpts('Koefisien deleted'));
   const restoreVersion = ahspMut.restoreVersion?.useMutation(mkOpts('Version restored'));
   const cloneMut = ahspMut.clone?.useMutation();
+  const deleteItemMut = ahspMut.delete?.useMutation();
 
   const [editHeader, setEditHeader] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -234,6 +235,17 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
   const prevId = idx > 0 ? list[idx - 1]?.id : null;
   const nextId = idx >= 0 && idx < list.length - 1 ? list[idx + 1]?.id : null;
 
+  const handleDelete = async () => {
+    if (!deleteItemMut) { toast('error', 'delete not available'); return; }
+    if (!confirm(`Delete AHSP "${item.kode} — ${item.jenis}"? This cannot be undone.`)) return;
+    try {
+      await deleteItemMut.mutateAsync({ id });
+      router.push('/app/ahsp');
+    } catch (e: any) {
+      toast('error', `Delete failed: ${e?.message ?? e}`);
+    }
+  };
+
   const handleClone = async () => {
     if (!cloneMut) return;
     const newKode = prompt('New kode for cloned AHSP', `${item.kode}-COPY`);
@@ -278,6 +290,15 @@ export default function AhspDetailPage({ params }: { params: Promise<{ id: strin
           >
             <Copy size={14} /> CLONE
           </button>
+          {isEditable && (
+            <button
+              onClick={handleDelete}
+              disabled={deleteItemMut?.isPending}
+              className="inline-flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={14} /> {deleteItemMut?.isPending ? 'DELETING…' : 'DELETE'}
+            </button>
+          )}
         </div>
       </div>
 

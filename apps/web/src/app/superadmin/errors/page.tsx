@@ -5,6 +5,13 @@ import { useState } from 'react';
 type Source = 'client' | 'trpc' | 'rest' | 'server';
 const SOURCES: Source[] = ['client', 'trpc', 'rest', 'server'];
 
+const RANGES: { label: string; hours: number | undefined }[] = [
+  { label: '1H', hours: 1 },
+  { label: '24H', hours: 24 },
+  { label: '7D', hours: 168 },
+  { label: 'ALL', hours: undefined },
+];
+
 const SOURCE_COLORS: Record<string, string> = {
   client: 'bg-blue-600',
   trpc: 'bg-purple-600',
@@ -14,11 +21,12 @@ const SOURCE_COLORS: Record<string, string> = {
 
 export default function SuperAdminErrors() {
   const [source, setSource] = useState<Source | undefined>(undefined);
+  const [sinceHours, setSinceHours] = useState<number | undefined>(undefined);
   const [expanded, setExpanded] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
   const stats = trpc.errorLog.stats.useQuery(undefined, { retry: false });
-  const recent = trpc.errorLog.recent.useQuery({ limit: 100, source }, { retry: false });
+  const recent = trpc.errorLog.recent.useQuery({ limit: 100, source, sinceHours }, { retry: false });
 
   const clear = trpc.errorLog.clear.useMutation({
     onSuccess: () => {
@@ -85,12 +93,27 @@ export default function SuperAdminErrors() {
         })}
       </div>
 
-      {/* Source filter */}
-      <div className="flex gap-2 flex-wrap font-mono text-xs">
-        <FilterBtn label="ALL" active={source === undefined} onClick={() => setSource(undefined)} />
-        {SOURCES.map(s => (
-          <FilterBtn key={s} label={s.toUpperCase()} active={source === s} onClick={() => setSource(s)} />
-        ))}
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Source filter */}
+        <div className="flex gap-2 flex-wrap font-mono text-xs">
+          <FilterBtn label="ALL" active={source === undefined} onClick={() => setSource(undefined)} />
+          {SOURCES.map(s => (
+            <FilterBtn key={s} label={s.toUpperCase()} active={source === s} onClick={() => setSource(s)} />
+          ))}
+        </div>
+
+        {/* Time-range filter */}
+        <div className="flex gap-2 flex-wrap font-mono text-xs">
+          {RANGES.map(r => (
+            <FilterBtn
+              key={r.label}
+              label={r.label}
+              active={sinceHours === r.hours}
+              onClick={() => setSinceHours(r.hours)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Table */}

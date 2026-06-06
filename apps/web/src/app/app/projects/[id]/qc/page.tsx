@@ -11,7 +11,7 @@
 import { use, useMemo, useState } from 'react';
 import { trpc } from '@sitelog/api-client/react';
 import Link from 'next/link';
-import { FlaskConical, Plus, X, ArrowLeft, RefreshCw } from 'lucide-react';
+import { FlaskConical, Plus, X, ArrowLeft, RefreshCw, Trash2 } from 'lucide-react';
 
 const RESULTS = [
   { key: 'pass', label: 'PASS', tone: 'bg-green-600 text-white' },
@@ -78,6 +78,23 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
       setRetestSeed(null);
     },
   });
+
+  // Delete is owner/admin only on the API; surfaces an alert on failure.
+  const del = trpc.qc.delete.useMutation({
+    onSuccess: () => {
+      utils.qc.list.invalidate({ projectId: id });
+      utils.qc.summary.invalidate({ projectId: id });
+    },
+    onError: (e) => {
+       
+      alert(`Delete failed: ${e.message}`);
+    },
+  });
+
+  const handleDelete = (it: any) => {
+    if (!confirm(`Delete this QC test (${it.testType}${it.sampleCode ? ' · ' + it.sampleCode : ''})?\nThis is irreversible.`)) return;
+    del.mutate({ id: it.id });
+  };
 
   // Distinct test_type values from current data + common defaults
   const typeOptions = useMemo(() => {
@@ -215,11 +232,20 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
                       <td className="px-3 py-2 font-bold">{actual}</td>
                       <td className="px-3 py-2">{resultBadge(it.result)}</td>
                       <td className="px-3 py-2 text-[11px]">{it.testedBy ?? '—'}</td>
-                      <td className="px-3 py-2 text-right space-x-2">
+                      <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                         <button onClick={e => { e.stopPropagation(); setDrawerId(it.id); }} className="text-[var(--color-brand)] underline">view</button>
                         {it.result === 'fail' && (
                           <button onClick={e => { e.stopPropagation(); setDrawerId(it.id); }} className="text-amber-600 underline">retest</button>
                         )}
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDelete(it); }}
+                          disabled={del.isPending}
+                          title="Delete test"
+                          aria-label="Delete test"
+                          className="text-red-600 hover:text-red-700 disabled:opacity-50 align-middle"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -242,7 +268,9 @@ export default function QcPage({ params }: { params: Promise<{ id: string }> }) 
       {drawerId && (
         <TestDrawer
           id={drawerId}
+          projectId={id}
           onClose={() => setDrawerId(null)}
+          onDeleted={() => setDrawerId(null)}
           onRetest={(original) => {
             setRetestSeed(original);
             setDrawerId(null);
@@ -381,9 +409,11 @@ function NewTestModal({ projectId, seed, onClose, onSubmit, pending }: {
 
 /* ───────────────────────────── DETAIL DRAWER ───────────────────────────── */
 
-function TestDrawer({ id, onClose, onRetest }: {
+function TestDrawer({ id, projectId, onClose, onDeleted, onRetest }: {
   id: string;
+  projectId: string;
   onClose: () => void;
+  onDeleted: () => void;
   onRetest: (original: any) => void;
 }) {
   const detail = trpc.qc.get.useQuery({ id });
@@ -393,6 +423,13 @@ function TestDrawer({ id, onClose, onRetest }: {
       utils.qc.get.invalidate({ id });
       utils.qc.list.invalidate();
       utils.qc.summary.invalidate();
+    },
+  });
+  const del = trpc.qc.delete.useMutation({
+    onSuccess: () => {
+      utils.qc.list.invalidate({ projectId });
+      utils.qc.summary.invalidate({ projectId });
+      onDeleted();
     },
   });
   const requestRetest = trpc.qc.requestRetest.useMutation({
@@ -527,6 +564,29 @@ function TestDrawer({ id, onClose, onRetest }: {
                 </button>
               </div>
             )}
+
+            {/* Delete (owner/admin only — irreversible) */}
+            <div className="border-t-2 border-red-600 pt-4">
+              <div className="font-bold tracking-wider mb-2 flex items-center gap-2 text-red-700">
+                <Trash2 size={12} /> DELETE TEST
+              </div>
+              <p className="text-[11px] text-neutral-600 mb-2">
+                Permanently removes this QC record. Restricted to owner/admin and
+                <b> cannot be undone</b>.
+              </p>
+              {del.error && <div className="text-red-600 text-[10px] mb-1">{del.error.message}</div>}
+              <button
+                disabled={del.isPending}
+                onClick={() => {
+                  if (!confirm(`Delete this QC test (${v.testType}${v.sampleCode ? ' · ' + v.sampleCode : ''})?\nThis is irreversible.`)) return;
+                  del.mutate({ id });
+                }}
+                className="w-full border-2 border-red-600 text-red-700 hover:bg-red-600 hover:text-white px-3 py-2 font-bold tracking-wider disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              >
+                <Trash2 size={13} />
+                {del.isPending ? 'DELETING…' : 'DELETE TEST'}
+              </button>
+            </div>
           </div>
         )}
       </div>

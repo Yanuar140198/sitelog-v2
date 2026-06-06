@@ -107,6 +107,7 @@ function SummaryCard({ label, value, highlight, warn }: { label: string; value: 
 function ContractCard({ projectId, contract }: { projectId: string; contract: any }) {
   const [open, setOpen] = useState(true);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<any | null>(null);
   const invoices = trpc.subcontractor.invoiceList.useQuery({ subcontractId: contract.id }, { enabled: open });
   const utils = trpc.useUtils();
   const approve = trpc.subcontractor.invoiceApprove.useMutation({
@@ -219,6 +220,10 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
                         </span>
                       </td>
                       <td className="px-2 py-1.5 text-right space-x-1">
+                        <button
+                          onClick={() => setEditInvoice(iv)}
+                          className="px-2 py-0.5 text-[10px] border border-[var(--color-ink)] hover:bg-neutral-100 tracking-wider"
+                        >EDIT</button>
                         {(status === 'submitted' || status === 'verified') && (
                           <button
                             onClick={() => approve.mutate({ id: iv.id })}
@@ -255,6 +260,15 @@ function ContractCard({ projectId, contract }: { projectId: string; contract: an
         <InvoiceModal
           contract={contract}
           onClose={() => setShowInvoice(false)}
+          projectId={projectId}
+        />
+      )}
+
+      {editInvoice && (
+        <EditInvoiceModal
+          contract={contract}
+          invoice={editInvoice}
+          onClose={() => setEditInvoice(null)}
           projectId={projectId}
         />
       )}
@@ -421,6 +435,101 @@ function InvoiceModal({ contract, projectId, onClose }: { contract: any; project
         <div className="flex gap-2 justify-end mt-4">
           <Button type="button" onClick={onClose}>CANCEL</Button>
           <Button type="submit" variant="primary" disabled={create.isPending}>SUBMIT</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+const STATUS_OPTIONS: InvoiceStatus[] = ['draft', 'submitted', 'verified', 'approved', 'paid', 'rejected'];
+
+function EditInvoiceModal({ contract, invoice, projectId, onClose }: { contract: any; invoice: any; projectId: string; onClose: () => void }) {
+  const utils = trpc.useUtils();
+  const update = trpc.subcontractor.invoiceUpdate.useMutation({
+    onSuccess: () => {
+      utils.subcontractor.invoiceList.invalidate({ subcontractId: contract.id });
+      utils.subcontractor.summary.invalidate({ projectId });
+      utils.subcontractor.contractsList.invalidate({ projectId });
+      onClose();
+    },
+    onError: (e) => alert(e.message),
+  });
+
+  const [form, setForm] = useState({
+    invoiceNumber: invoice.invoiceNumber ?? '',
+    invoiceDate: invoice.invoiceDate ?? '',
+    progressPct: Number(invoice.progressPct) || 0,
+    grossAmount: Number(invoice.grossAmount) || 0,
+    retentionAmount: Number(invoice.retentionAmount) || 0,
+    ppnAmount: Number(invoice.ppnAmount) || 0,
+    status: (invoice.status as InvoiceStatus) ?? 'submitted',
+    notes: invoice.notes ?? '',
+  });
+
+  const gross = Number(form.grossAmount) || 0;
+  const retention = Number(form.retentionAmount) || 0;
+  const ppn = Number(form.ppnAmount) || 0;
+  const net = gross - retention + ppn;
+
+  return (
+    <Modal title={`EDIT INVOICE — ${invoice.invoiceNumber}`} onClose={onClose}>
+      <form
+        className="space-y-3"
+        onSubmit={e => {
+          e.preventDefault();
+          if (!form.invoiceNumber) { alert('Nomor invoice wajib'); return; }
+          if (gross <= 0) { alert('Gross amount harus > 0'); return; }
+          if (net < 0) { alert('Net payable tidak boleh negatif'); return; }
+          update.mutate({
+            id: invoice.id,
+            invoiceNumber: form.invoiceNumber,
+            invoiceDate: form.invoiceDate,
+            progressPct: Number(form.progressPct) || 0,
+            grossAmount: gross,
+            retentionAmount: retention,
+            ppnAmount: ppn,
+            netAmount: net,
+            status: form.status,
+            notes: form.notes || null,
+          });
+        }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Invoice Number *"><Input required value={form.invoiceNumber} onChange={e => setForm({ ...form, invoiceNumber: e.target.value })} placeholder="INV-001/2026" /></Field>
+          <Field label="Invoice Date *"><Input type="date" required value={form.invoiceDate} onChange={e => setForm({ ...form, invoiceDate: e.target.value })} /></Field>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Progress %"><Input type="number" step="0.1" value={form.progressPct} onChange={e => setForm({ ...form, progressPct: Number(e.target.value) })} /></Field>
+          <Field label="Status">
+            <select
+              value={form.status}
+              onChange={e => setForm({ ...form, status: e.target.value as InvoiceStatus })}
+              className="w-full border-2 border-[var(--color-ink)] px-2 py-1.5 font-mono text-xs bg-white"
+            >
+              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="Gross Amount (Rp) *"><Input type="number" step="any" required value={form.grossAmount} onChange={e => setForm({ ...form, grossAmount: Number(e.target.value) })} /></Field>
+          <Field label="Retention (Rp)"><Input type="number" step="any" value={form.retentionAmount} onChange={e => setForm({ ...form, retentionAmount: Number(e.target.value) })} /></Field>
+          <Field label="PPN (Rp)"><Input type="number" step="any" value={form.ppnAmount} onChange={e => setForm({ ...form, ppnAmount: Number(e.target.value) })} /></Field>
+        </div>
+
+        <div className="bg-neutral-50 border-2 border-[var(--color-ink)] p-3 space-y-1 font-mono text-xs">
+          <div className="flex justify-between"><span>Gross</span><span>{fmtIDR(gross)}</span></div>
+          <div className="flex justify-between text-neutral-600"><span>− Retention</span><span>{fmtIDR(retention)}</span></div>
+          <div className="flex justify-between text-neutral-600"><span>+ PPN</span><span>{fmtIDR(ppn)}</span></div>
+          <div className="flex justify-between font-bold border-t border-[var(--color-ink)] pt-1 mt-1">
+            <span>NET PAYABLE</span><span className="text-[var(--color-brand)]">{fmtIDR(net)}</span>
+          </div>
+        </div>
+
+        <Field label="Notes"><Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></Field>
+
+        <div className="flex gap-2 justify-end mt-4">
+          <Button type="button" onClick={onClose}>CANCEL</Button>
+          <Button type="submit" variant="primary" disabled={update.isPending}>SAVE</Button>
         </div>
       </form>
     </Modal>

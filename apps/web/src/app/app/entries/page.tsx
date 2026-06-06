@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 
 export default function EntriesPage() {
   const router = useRouter();
+  const [projectId, setProjectId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const list = trpc.entry.list.useQuery({ from: from || undefined, to: to || undefined, limit: 100 });
+  const projects = trpc.project.list.useQuery();
+  const list = trpc.entry.list.useQuery({ projectId: projectId || undefined, from: from || undefined, to: to || undefined, limit: 100 });
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -19,6 +21,16 @@ export default function EntriesPage() {
       </div>
 
       <div className="flex flex-wrap gap-4 items-end">
+        <div>
+          <Label>Project</Label>
+          <select value={projectId} onChange={e => setProjectId(e.target.value)}
+            className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
+            <option value="">{projects.isLoading ? 'Loading…' : 'All projects'}</option>
+            {(projects.data ?? []).map(p => (
+              <option key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ''}{p.name}</option>
+            ))}
+          </select>
+        </div>
         <div><Label>From</Label><Input type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
         <div><Label>To</Label><Input type="date" value={to} onChange={e => setTo(e.target.value)} /></div>
       </div>

@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { trpc } from '@sitelog/api-client/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileStack, Plus, Trash2, Search } from 'lucide-react';
+import { FileStack, Plus, Trash2, Search, FolderInput } from 'lucide-react';
 
 const CATEGORIES = ['all', 'mining', 'civil_road', 'building', 'drainage', 'earthwork'];
 
@@ -17,6 +18,7 @@ export default function TemplatesPage() {
   const create = trpc.boqTemplate.create.useMutation({ onSuccess: () => { utils.boqTemplate.list.invalidate(); setShow(false); } });
   const [show, setShow] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', category: '', scopes: '' });
+  const [applyTpl, setApplyTpl] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = (list.data ?? []).filter(t => !q || (t.name + ' ' + (t.description ?? '')).toLowerCase().includes(q.toLowerCase()));
   const orgItems = filtered.filter(t => t.organizationId);
@@ -59,7 +61,7 @@ export default function TemplatesPage() {
       {publicItems.length > 0 && (
         <Section title={`PUBLIC TEMPLATES (${publicItems.length})`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {publicItems.map(t => <Card key={t.id} t={t} isOrg={false} onDel={() => {}} />)}
+            {publicItems.map(t => <Card key={t.id} t={t} isOrg={false} onDel={() => {}} onApply={() => setApplyTpl({ id: t.id, name: t.name })} />)}
           </div>
         </Section>
       )}
@@ -68,7 +70,7 @@ export default function TemplatesPage() {
         {orgItems.length === 0
           ? <div className="text-center py-12 text-neutral-500 font-mono text-xs">No org templates. Save from a project BOQ or create new.</div>
           : <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {orgItems.map(t => <Card key={t.id} t={t} isOrg={true} onDel={() => confirm('Delete template?') && del.mutate({ id: t.id })} />)}
+              {orgItems.map(t => <Card key={t.id} t={t} isOrg={true} onDel={() => confirm('Delete template?') && del.mutate({ id: t.id })} onApply={() => setApplyTpl({ id: t.id, name: t.name })} />)}
             </div>}
       </Section>
 
@@ -95,11 +97,74 @@ export default function TemplatesPage() {
           </div>
         </div>
       )}
+
+      {applyTpl && <ApplyModal tpl={applyTpl} onClose={() => setApplyTpl(null)} />}
     </div>
   );
 }
 
-function Card({ t, isOrg, onDel }: { t: any; isOrg: boolean; onDel: () => void }) {
+function ApplyModal({ tpl, onClose }: { tpl: { id: string; name: string }; onClose: () => void }) {
+  const projects = trpc.project.list.useQuery(undefined);
+  const [projectId, setProjectId] = useState('');
+  const apply = trpc.boqTemplate.applyToProject.useMutation();
+
+  function submit() {
+    if (!projectId) return;
+    apply.mutate({ templateId: tpl.id, projectId });
+  }
+
+  const done = apply.data;
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white border-2 border-[var(--color-ink)] p-4 md:p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-[8px_8px_0_var(--color-brand)]">
+        <h2 className="font-display text-2xl font-bold mb-1">Apply Template</h2>
+        <p className="font-mono text-xs text-neutral-600 mb-4">{tpl.name}</p>
+
+        {done ? (
+          <div className="space-y-3">
+            <div className="border-2 border-[var(--color-ink)] bg-green-50 p-3">
+              <p className="font-mono text-xs font-bold">APPLIED · {done.added} added · {done.total - done.added} skipped{done.missing > 0 ? ` · ${done.missing} missing AHSP` : ''}</p>
+            </div>
+            <div className="flex gap-2 mt-4">
+              {projectId && (
+                <Link href={`/app/projects/${projectId}`}>
+                  <Button variant="primary">OPEN PROJECT</Button>
+                </Link>
+              )}
+              <Button onClick={onClose}>CLOSE</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <Label>Project *</Label>
+              <select value={projectId} onChange={e => setProjectId(e.target.value)}
+                className="w-full px-3 py-2 bg-white border-2 border-[var(--color-ink)] font-mono text-sm">
+                <option value="">{projects.isLoading ? 'Loading…' : 'Select a project'}</option>
+                {(projects.data ?? []).map(p => (
+                  <option key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ''}{p.name}</option>
+                ))}
+              </select>
+              <p className="font-mono text-[10px] text-neutral-500 mt-1">Scopes already in the project BOQ are skipped.</p>
+            </div>
+            {apply.error && (
+              <div className="border-2 border-red-600 bg-red-50 p-2 font-mono text-xs text-red-700">{apply.error.message}</div>
+            )}
+            <div className="flex gap-2 mt-4">
+              <Button onClick={submit} variant="primary" disabled={!projectId || apply.isPending}>
+                {apply.isPending ? 'APPLYING…' : 'APPLY'}
+              </Button>
+              <Button onClick={onClose}>CANCEL</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Card({ t, isOrg, onDel, onApply }: { t: any; isOrg: boolean; onDel: () => void; onApply: () => void }) {
   const scopeCount = (() => { try { return JSON.parse(t.items).length; } catch { return 0; } })();
   return (
     <div className="border-2 border-[var(--color-ink)] bg-white p-4 hover:shadow-[3px_3px_0_var(--color-brand)] transition">
@@ -116,6 +181,10 @@ function Card({ t, isOrg, onDel }: { t: any; isOrg: boolean; onDel: () => void }
         <span className="bg-neutral-100 border border-[var(--color-ink)] px-2 py-0.5 font-mono text-[9px] font-bold">{scopeCount} SCOPES</span>
         {!isOrg && <span className="bg-neutral-200 px-2 py-0.5 font-mono text-[9px] font-bold">PUBLIC</span>}
       </div>
+      <button onClick={onApply}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 border-2 border-[var(--color-ink)] bg-white px-2 py-1.5 font-mono text-[10px] font-bold tracking-wide hover:bg-[var(--color-ink)] hover:text-white transition">
+        <FolderInput size={12} /> APPLY TO PROJECT
+      </button>
     </div>
   );
 }
