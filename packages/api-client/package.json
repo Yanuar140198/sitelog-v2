@@ -15,10 +15,10 @@
     "@trpc/react-query": "^11.0.0-rc.682",
     "@tanstack/react-query": "^5.62.7",
     "superjson": "^2.2.2",
-    "react": "^19.2.6"
+    "react": "^19.2.7"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "@types/react": "^19.2.15"
+    "@types/react": "^19.2.17"
   }
 }
