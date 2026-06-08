@@ -17,7 +17,7 @@ jobs:
       E2E_PASSWORD: ${{ secrets.STAGING_E2E_PASSWORD }}
       SITELOG_API_KEY: ${{ secrets.STAGING_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: grafana/setup-k6-action@v1
       - name: k6 smoke
         env:

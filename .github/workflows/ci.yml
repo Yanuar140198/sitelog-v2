@@ -28,7 +28,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sitelog
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -61,7 +61,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-stub-secret-32-bytes-long-stub-secret-key
       SITELOG_ADMIN_EMAILS: demo@sitelog.local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
       - name: Build API image (smoke)
         uses: docker/build-push-action@v7
