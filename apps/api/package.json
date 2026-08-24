@@ -25,7 +25,7 @@
     "@sitelog/db": "workspace:*",
     "@sitelog/emails": "workspace:*",
     "@sitelog/shared": "workspace:*",
-    "@trpc/server": "^11.0.0-rc.682",
+    "@trpc/server": "^11.18.0",
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "hono": "^4.6.14",
